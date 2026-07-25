@@ -4,6 +4,7 @@ title: "付録A　付属ソースコード一覧（ガイド）"
 
 > **この付録のゴール**  
 > 本書籍で作成・使用する付属プログラム（`code/` 配下）のファイル構成と役割を一覧で確認できるようにする。  
+> **特徴**: ダウンロード（期間指定）と統計計算（直近 $N$ レース切り出し `df-take-recent-races`）を紐付ける本線パイプラインのソースコード一覧。
 
 #### A.1 はじめに
 
@@ -23,16 +24,16 @@ racket code/ch01-basics.rkt
   * **役割**: Racket 基本文法、`define`、`cond`、リスト・ハッシュ構造の動作サンプル
 * **[ch02-json-parser.rkt](https://github.com/bluehive/mypublish-racket-statistics/blob/main/code/ch02-json-parser.rkt)**
   * **章**: 第2章【本線】
-  * **役割**: `boatraceopenapi` 構造化 JSON (`today.json`) を `(require json)` で一発パースし構造化 CSV を自動生成
+  * **役割**: `boatraceopenapi` 構造化 JSON (`data/raw/*.json`) を `(require json)` で全自動スキャンし累積 CSV を生成
 * **[ch02-html-parser.rkt](https://github.com/bluehive/mypublish-racket-statistics/blob/main/code/ch02-html-parser.rkt)**
   * **章**: 第2章【参考・応用】
   * **役割**: 公式 Web サイトの HTML 生データを Racket の正規表現でパースし構造化 CSV へ変換
 * **[ch03-racketframes-basics.rkt](https://github.com/bluehive/mypublish-racket-statistics/blob/main/code/ch03-racketframes-basics.rkt)**
-  * **章**: 第3章
-  * **役割**: RacketFrames による CSV 読み込み（`read-csv`）、列操作（`df-project`）、欠損値除去（`df-drop-na`）
+  * **章**: 第3章【本線強化】
+  * **役割**: RacketFrames による CSV 読み込み、および期間蓄積 CSV から「直近 $N$ レース（件数 $N$）」を厳密スライス切り出し（`df-take-recent-races`）
 * **[ch04-analysis.rkt](https://github.com/bluehive/mypublish-racket-statistics/blob/main/code/ch04-analysis.rkt)**
-  * **章**: 第4章
-  * **役割**: 平均・標準偏差の算出（`df-mean`/`df-std`）、フィルタリング（`df-filter`）、`Groupby` による枠番別集計
+  * **章**: 第4章【本線強化】
+  * **役割**: 直近 $N$ レース抽出データに対する平均・標準偏差の算出（`df-mean`/`df-std`）、フィルタリング（`df-filter`）、`Groupby` による枠番別一括集計
 * **[ch05-visualization.rkt](https://github.com/bluehive/mypublish-racket-statistics/blob/main/code/ch05-visualization.rkt)**
   * **章**: 第5章
   * **役割**: `df-plot-scatter` や `df-plot-histogram` によるグラフ可視化、JSON/CSV 出力
