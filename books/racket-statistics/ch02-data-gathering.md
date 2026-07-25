@@ -3,8 +3,8 @@ title: "第2章　ボートレースのデータを集める（データ収集�
 ---
 
 > **この章のゴール**  
-> Webや外部ツール（`curl`）を活用してボートレースのデータ（CSV/HTML）を手元に取得し、プログラムで扱える状態にする。生データ（HTML）と構造化データ（CSV）の違い、および `pyjpboatrace` の内部パース構造を理解する。  
-> **使用技術**: Racket `net/url`, `curl` (スリープ・通信速度制限付き), `mise` タスクランナー, `pyjpboatrace` のデータパイプライン  
+> Webや外部ツール（`curl`）を活用してボートレースのデータ（CSV/HTML）を手元に取得し、プログラムで扱える状態にする。生データ（HTML）と構造化データ（CSV）の違い、および `pyjpboatrace` の内部パース構造と Racket での変換方法を理解する。  
+> **使用技術**: Racket `net/url`, `curl` (スリープ・通信速度制限付き), `mise` タスクランナー, Racket による HTML パース  
 
 本章では、統計分析の土台となる「データ収集（スクレイピングとダウンロード）」の手法を学びます。Racket のネットワーク機能を使う方法と、より簡単で確実な外部ツール（`curl`）を `mise` タスクランナーで実行する方法の 2 通りを解説します。
 
@@ -72,11 +72,31 @@ mise run data:download:official
 ```
 
 1. **公式Webサイトの生データ (Raw Data / HTML)**:
-   公式Webサイト（`boatrace.jp`）が配信しているのは、人間がブラウザで見やすく装飾された **HTML ファイル**、または過去データ配信用の固定長テキストファイル（`.TXT`）です。そのままではプログラムで直接計算できません。
+   公式Webサイト（`boatrace.jp`）が配信しているのは、人間がブラウザで見やすく装飾された **HTML ファイル** です。そのままではプログラムで直接計算できません。
 2. **`pyjpboatrace` などのパース（抽出）ライブラリの役割**:
-   Python ライブラリ `pyjpboatrace` などは、この生データ（HTML / TXT）を自動ダウンロードし、内部で HTML タグを解析（パース）して、必要な数値（勝率・モーター率・着順）だけを取り出した **CSV や JSON などの構造化データ** へと自動変換しています。
-3. **本書での実習アプローチ**:
-   RacketFrames で即座にデータ分析の楽しさを体験できるよう、本演習では HTML 生データから数値抽出・前処理を施した **`data/sample_races.csv`**（CSVファイル）を実習用データとして活用しています！
+   Python ライブラリ `pyjpboatrace` などは、この生データ（HTML）を自動ダウンロードし、内部で HTML タグを解析（パース）して、必要な数値（勝率・モーター率・着順）だけを取り出した **CSV や JSON などの構造化データ** へと自動変換しています。
+
+##### ❓ 誰が変換パイプラインを実行するの？ Racket だけでできるの？
+
+* **誰がやるの？**: Python では `pyjpboatrace` が裏で自動で行っていますが、通常はデータアナリストやエンジニアが前処理プログラムを書いて行います。本書の演習では、受講生がすぐ分析を体験できるよう、著者が前処理を施した **`data/sample_races.csv`** を提供しています。
+* **Racket でできるの？**: **「もちろん 100% Racket だけで可能です！」**  
+  Racket には標準で正規表現 (`regexp`) や HTML/S式変換ライブラリが用意されており、取得した HTML タグから数値を取り出して CSV を自動生成する前処理プログラムを Racket 1本で作成できます！
+
+```racket
+#lang racket
+;; 【Racket だけで HTML からデータを取り出して CSV に保存するミニ例】
+(define html-text "<td class='racer'>峰竜太</td><td class='rate'>0.85</td>")
+
+;; 正規表現で HTML タグの中身（選手名と勝率）をすくい取る
+(define racer-name (second (regexp-match #px"<td class='racer'>(.*?)</td>" html-text)))
+(define win-rate (second (regexp-match #px"<td class='rate'>(.*?)</td>" html-text)))
+
+;; CSV 形式のテキストを作成してファイルへ書き出す！
+(define csv-line (format "~a,~a\n" racer-name win-rate))
+(display-to-file csv-line "data/parsed_races.csv" #:exists 'append)
+
+(printf "Racket だけで HTML から CSV へのパース変換が完了しました！\n")
+```
 
 ---
 
@@ -94,42 +114,16 @@ race_id,stadium,boat_num,racer_id,racer_name,win_rate,motor_rate,rank
 ...
 ```
 
-* **`race_id`**: レースを識別する固有ID（日付-場コード-レース番号）
-* **`stadium`**: レース場名（桐生、平和島、住之江など）
-* **`boat_num`**: 艇番（1〜6枠）
-* **`racer_id`**: レーサーの登録番号
-* **`racer_name`**: 選手名
-* **`win_rate`**: レーサーの全国勝率（0.00〜1.00）
-* **`motor_rate`**: モーターの2連対率（0.00〜1.00）
-* **`rank`**: 実際の確定着順（1〜6）
-
 次章では、この CSV データを **RacketFrames** を使って読み込み、データフレームとして自在に扱う方法を学びます。
 
 ---
 
 > ### 📖 【コラム】他言語の知見を活かす：Pythonライブラリ `pyjpboatrace` に学ぶデータ構造と公式取得
 > 
-> **大学図書館の司書より：知的なリサーチのヒント**
-> 
-> 先人の知恵が集積された「目録」や「ライブラリ」を調べることは、学術研究において最も基本的かつ有意義なステップです。
-> 私たちがこれから Racket で構築するプログラムの設計図を描くにあたり、Python の世界で広く利用されているオープンソースソフトウェア **`pyjpboatrace`**（[hmasdev/pyjpboatrace](https://github.com/hmasdev/pyjpboatrace)）のデータ構造は大いなる参考資料となります。
-> 
 > **1. URL構成（情報のありか）の分析と curl タスク**
-> ボートレースのオフィシャルサイト（`boatrace.jp`）からデータを取得するためには、情報がどのような「住所（URL）」に整理されているかを特定する必要があります。`pyjpboatrace` の内部実装を紐解くと、以下のようなパラメータ構成で各ページが配置されていることがわかります。
+> ボートレースのオフィシャルサイト（`boatrace.jp`）からデータを取得するためには、情報がどのような「住所（URL）」に整理されているかを特定する必要があります。
 > * **番組表（出走表）**: `https://www.boatrace.jp/owpc/pc/race/racelist?rno=[レース番号]&jcd=[場コード]&hd=[日付]`
 > * **レース結果**: `https://www.boatrace.jp/owpc/pc/race/raceresult?rno=[レース番号]&jcd=[場コード]&hd=[日付]`
 > 
-> ここで、`rno` はレース番号（1〜12）、`jcd` は全国24箇所のボートレース場を識別する「場コード」（例: 桐生は `01`、平和島は `04` など）、`hd` は `YYYYMMDD` 形式の日付です。
-> 本書では、このURLパラメータ構造を応用し、`mise run data:download:official` というタスクで公式Webサイトの最新HTMLを **スリープ・速度制限付き** で一発取得できる環境を整えています。
-> 
 > **2. データの項目（スキーマ）の設計手本**
-> `pyjpboatrace` が HTML から抽出して JSON 形式に構造化している項目群は、私たちが RacketFrames の `DataFrame` に取り込むべき「列（Series）」の設計基準になります。
-> * レーサーの基本情報（登録番号、氏名、級別、年齢、体重）
-> * 成績情報（全国勝率、現地勝率、モーターの複勝率、ボートの複勝率）
-> 
-> ⚖️ **データ収集におけるマナーと倫理（司書からの重要なお願い）**
-> 図書館の資料を乱暴に扱うと他の利用者の迷惑になるのと同様に、ウェブサイトへの自動アクセスを行う際もルールを守る必要があります。アクセス頻度の制限（`sleep 1` や `--limit-rate`）を守り、サーバーに負荷をかけない倫理的なデータ収集を行いましょう。
-
----
-
-* ※データ収集手法とマナーの整理：三角ロジックで整理予定
+> `pyjpboatrace` が HTML から抽出して構造化している項目群は、私たちが RacketFrames の `DataFrame` に取り込むべき「列（Series）」の設計基準になります。
