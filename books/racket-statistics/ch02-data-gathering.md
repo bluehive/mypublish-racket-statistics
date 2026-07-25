@@ -3,8 +3,8 @@ title: "第2章　ボートレースのデータを集める（データ収集�
 ---
 
 > **この章のゴール**  
-> Webや外部ツール（`curl`）を活用してボートレースのデータ（CSV/HTML）を手元に取得し、プログラムで扱える状態にする。付属のサンプルデータ（`code/sample_races.csv` / `data/sample_races.csv`）および公式Webデータ取得の仕組みを理解する。  
-> **使用技術**: Racket `net/url`, `curl` (スリープ・通信速度制限付き), `mise` タスクランナー, `pyjpboatrace` のURL設計  
+> Webや外部ツール（`curl`）を活用してボートレースのデータ（CSV/HTML）を手元に取得し、プログラムで扱える状態にする。生データ（HTML）と構造化データ（CSV）の違い、および `pyjpboatrace` の内部パース構造を理解する。  
+> **使用技術**: Racket `net/url`, `curl` (スリープ・通信速度制限付き), `mise` タスクランナー, `pyjpboatrace` のデータパイプライン  
 
 本章では、統計分析の土台となる「データ収集（スクレイピングとダウンロード）」の手法を学びます。Racket のネットワーク機能を使う方法と、より簡単で確実な外部ツール（`curl`）を `mise` タスクランナーで実行する方法の 2 通りを解説します。
 
@@ -44,7 +44,7 @@ Web サイトによっては、高度なアクセス制御（JavaScriptの実行
 curl -s --limit-rate 100k -o data/sample_races.csv "https://raw.githubusercontent.com/bluehive/mypublish-racket-statistics/main/data/sample_races.csv"
 ```
 
-##### 2. `mise.toml` による公式データ取得タスクの自動化
+##### 2. `mise.toml` による公式Webデータ取得タスクの自動化
 後述の `pyjpboatrace` のURL構造を参考に、ボートレース公式Webサイトから本日の出走表データ（HTML）を `curl` で安全に自動取得するタスクが `mise.toml` に用意されています。このタスクには **`--limit-rate 100k` オプションと `sleep 1` 秒のアクセス待ち時間** が組み込まれています。
 
 ```bash
@@ -52,11 +52,37 @@ curl -s --limit-rate 100k -o data/sample_races.csv "https://raw.githubuserconten
 mise run data:download:official
 ```
 
-実行すると、`data/raw/racelist_sample.html` に最新の出走表データが保存されます。付属のソースコードフォルダ（`code/`）内にも予備のデータが保管されています。
+実行すると、`data/raw/racelist_sample.html` に最新の出走表データが保存されます。
 
-#### 2.3 CSVファイル形式とボートレースデータの構造
+---
 
-ダウンロードしたデータは、扱いやすい **CSV（Comma-Separated Values）** 形式で保存されます。CSV は、データをカンマ `,` で区切った単純なテキストファイルです。
+#### 2.3 💡 なぜ公式データは HTML なのか？（生データと CSV のデータパイプライン）
+
+ここで「`curl` でボートレース公式Webサイト（`boatrace.jp`）からダウンロードしたデータは、なぜ CSV ではなく **HTML**（Webページの見た目用ファイル）なのか？」という疑問が浮かぶかもしれません。
+
+これこそがデータサイエンスにおける **「生データ（Raw Data）」** と **「構造化データ（Structured Data / CSV）」** の重要な違いです！
+
+```text
+  【ボートレースデータの変換パイプライン (pyjpboatrace などの内部構造)】
+
+   ① [ボートレース公式Web] ─── curl ───> ② 生データ (HTML / 公式テキストTXT)
+                                                 │
+                                                 ▼ (前処理・HTMLパース処理)
+   ④ RacketFrames で分析! <─── CSV保存 <─── ③ 構造化データ (CSV / JSON)
+```
+
+1. **公式Webサイトの生データ (Raw Data / HTML)**:
+   公式Webサイト（`boatrace.jp`）が配信しているのは、人間がブラウザで見やすく装飾された **HTML ファイル**、または過去データ配信用の固定長テキストファイル（`.TXT`）です。そのままではプログラムで直接計算できません。
+2. **`pyjpboatrace` などのパース（抽出）ライブラリの役割**:
+   Python ライブラリ `pyjpboatrace` などは、この生データ（HTML / TXT）を自動ダウンロードし、内部で HTML タグを解析（パース）して、必要な数値（勝率・モーター率・着順）だけを取り出した **CSV や JSON などの構造化データ** へと自動変換しています。
+3. **本書での実習アプローチ**:
+   RacketFrames で即座にデータ分析の楽しさを体験できるよう、本演習では HTML 生データから数値抽出・前処理を施した **`data/sample_races.csv`**（CSVファイル）を実習用データとして活用しています！
+
+---
+
+#### 2.4 CSVファイル形式とボートレースデータの構造
+
+前処理された **CSV（Comma-Separated Values）** 形式のデータは、データをカンマ `,` で区切った単純なテキストファイルで、RacketFrames でそのまま読み込めます。
 
 本書で扱うボートレースデータ（`data/sample_races.csv`）の標準的な構造は以下のとおりです。
 
