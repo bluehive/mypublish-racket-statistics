@@ -2,17 +2,8 @@
 NODE_ENV = "development"
 
 [tasks."data:download"]
-description = "【本線】boatraceopenapi から本日の全場レースデータ (日付別 JSON: YYYYMMDD.json) を安全に自動取得・保存する"
-shell = "bash -c"
-run = '''
-set -euo pipefail
-TODAY=$(date +%Y%m%d)
-YEAR=$(date +%Y)
-mkdir -p data/raw
-echo "Downloading boatraceopenapi daily data (${TODAY}.json)..."
-curl -s --limit-rate 100k -o "data/raw/${TODAY}.json" "https://boatraceopenapi.github.io/api/v1/${YEAR}/${TODAY}.json" || curl -s --limit-rate 100k -o "data/raw/${TODAY}.json" "https://boatraceopenapi.github.io/api/v1/today.json"
-echo "Download complete: data/raw/${TODAY}.json"
-'''
+description = "【本線デフォルトエイリアス】data:download:json を呼び出して全場レースデータ (JSON) を自動取得する"
+depends = ["data:download:json"]
 
 [tasks."data:download:json"]
 description = "【本線】boatraceopenapi から本日の全場レースデータ (日付別 JSON: YYYYMMDD.json) を安全に自動取得・保存する"
@@ -75,6 +66,6 @@ shell = "bash -c"
 run = "npx zenn preview"
 
 [tasks."test:racket"]
-description = "code/ 配下の Racket サンプルプログラムを一括テスト"
+description = "code/配下の Racket サンプルプログラムを一括テスト"
 shell = "bash -c"
 run = "racket code/ch01-basics.rkt && racket code/ch02-json-parser.rkt && racket code/ch02-html-parser.rkt && racket code/ch03-racketframes-basics.rkt && racket code/ch04-analysis.rkt && racket code/ch05-visualization.rkt && racket code/ch06-prediction.rkt"
