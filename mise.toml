@@ -2,25 +2,29 @@
 NODE_ENV = "development"
 
 [tasks."data:download"]
-description = "【本線】boatraceopenapi から本日の全場レースデータ (JSON) を自動取得する"
+description = "【本線】boatraceopenapi から本日の全場レースデータ (日付別 JSON: YYYYMMDD.json) を安全に自動取得・保存する"
 shell = "bash -c"
 run = '''
 set -euo pipefail
+TODAY=$(date +%Y%m%d)
+YEAR=$(date +%Y)
 mkdir -p data/raw
-echo "Downloading boatraceopenapi daily data (today.json)..."
-curl -s --limit-rate 100k -o data/raw/today.json "https://boatraceopenapi.github.io/api/v1/today.json"
-echo "Download complete: data/raw/today.json"
+echo "Downloading boatraceopenapi daily data (${TODAY}.json)..."
+curl -s --limit-rate 100k -o "data/raw/${TODAY}.json" "https://boatraceopenapi.github.io/api/v1/${YEAR}/${TODAY}.json" || curl -s --limit-rate 100k -o "data/raw/${TODAY}.json" "https://boatraceopenapi.github.io/api/v1/today.json"
+echo "Download complete: data/raw/${TODAY}.json"
 '''
 
 [tasks."data:download:json"]
-description = "【本線】boatraceopenapi から本日の全場レースデータ (JSON) を自動取得する"
+description = "【本線】boatraceopenapi から本日の全場レースデータ (日付別 JSON: YYYYMMDD.json) を安全に自動取得・保存する"
 shell = "bash -c"
 run = '''
 set -euo pipefail
+TODAY=$(date +%Y%m%d)
+YEAR=$(date +%Y)
 mkdir -p data/raw
-echo "Downloading boatraceopenapi daily data (today.json)..."
-curl -s --limit-rate 100k -o data/raw/today.json "https://boatraceopenapi.github.io/api/v1/today.json"
-echo "Download complete: data/raw/today.json"
+echo "Downloading boatraceopenapi daily data (${TODAY}.json)..."
+curl -s --limit-rate 100k -o "data/raw/${TODAY}.json" "https://boatraceopenapi.github.io/api/v1/${YEAR}/${TODAY}.json" || curl -s --limit-rate 100k -o "data/raw/${TODAY}.json" "https://boatraceopenapi.github.io/api/v1/today.json"
+echo "Download complete: data/raw/${TODAY}.json"
 '''
 
 [tasks."data:download:sample"]
@@ -41,7 +45,7 @@ echo "Download complete: data/raw/racelist_sample.html"
 '''
 
 [tasks."parse:json"]
-description = "【本線】第2章：Racket (require json) で boatraceopenapi JSON データをパースし構造化 CSV を生成する"
+description = "【本線】第2章：data/raw/*.json の全ファイルを自動スキャンして Racket (require json) でパースし構造化 CSV を生成する"
 shell = "bash -c"
 run = "racket code/ch02-json-parser.rkt"
 

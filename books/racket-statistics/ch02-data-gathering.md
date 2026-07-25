@@ -4,36 +4,39 @@ title: "第2章　ボートレースのデータを集める（データ収集�
 
 > **この章のゴール**  
 > Webや外部ツール（`curl`）およびオープンAPI（`boatraceopenapi`）を活用してボートレースのデータ（JSON/HTML）を手元に取得し、プログラムで扱える構造化CSVへと変換する。  
-> **【本線】**: `boatraceopenapi` から構造化 JSON (`today.json`) を取得し、Racket 標準の `(require json)` で一発パース（`code/ch02-json-parser.rkt`）。  
+> **【本線】**: `boatraceopenapi` から日付別 JSON (`data/raw/YYYYMMDD.json`) を取得保存し、Racket 標準の `(require json)` で日付別ファイルを全自動スキャン＆蓄積パース（`code/ch02-json-parser.rkt`）。上書きによるデータ消失を防ぎ、日々データを積み重ねる設計を理解する。  
 > **【参考・応用】**: 公式Webサイト（HTML生データ）の `curl` 取得と正規表現パース（`code/ch02-html-parser.rkt`）。  
 > **使用技術**: Racket `net/url`, `json`, `curl`, `mise` タスクランナー (`mise run parse:json`, `mise run parse:html`)
 
-本章では、統計分析の土台となる「データ収集」の手法を学びます。現在ではボートレースのデータをオープンデータとして JSON 形式で配信する **`boatraceopenapi/api`** が存在するため、本章では **「構造化 JSON データを Racket で読み込む手法」を本線** として解説します。
+本章では、統計分析の土台となる「データ収集」の手法を学びます。現在ではボートレースのデータをオープンデータとして JSON 形式で配信する **`boatraceopenapi/api`** が存在するため、本章では **「日付別 JSON データを手元に蓄積保存し、Racket で一括パースする手法」を本線** として解説します。
 
 また、従来手法や他言語ライブラリ（`pyjpboatrace` 等）でよく行われている **「公式Webサイトから HTML 生データをダウンロードしてパースする手法」** も発展学習として併せて解説します。
 
 ---
 
-#### 2.1 【本線】オープンデータ API から構造化 JSON を取得してパースする
+#### 2.1 【本線】オープンデータ API から日付別 JSON を取得・蓄積してパースする
 
 最もしっくりかつ確実なデータ収集法は、すでに構造化されて提供されている **JSON データ API** を活用することです。
 
-##### 1. `boatraceopenapi/api` とは？
-[boatraceopenapi/api](https://github.com/boatraceopenapi/api) は、GitHub Actions と GitHub Pages を利用して全国 24 場のボートレースデータ（出走表・直前情報・確定着順）を JSON 形式で配信しているオープンプロジェクトです。
+##### 1. `boatraceopenapi/api` と日付別保存の重要性
+[boatraceopenapi/api](https://github.com/boatraceopenapi/api) では、日付ごとのレースデータ（出走表・直前情報・確定着順）が以下の URL で配信されています。
 
-- **本日の全場データ**: `https://boatraceopenapi.github.io/api/v1/today.json`
-- **過去データ（年月日指定）**: `https://boatraceopenapi.github.io/api/v1/YYYY/YYYYMMDD.json`
+- **本日のデータ**: `https://boatraceopenapi.github.io/api/v1/today.json`
+- **日付指定データ**: `https://boatraceopenapi.github.io/api/v1/YYYY/YYYYMMDD.json`
 
-##### 2. `mise` による JSON データの自動取得
-ターミナルから以下のタスクコマンドを実行するだけで、本日の最新全場データが `data/raw/today.json` へ安全かつ高速にダウンロードされます。
+固定の `today.json` というファイル名だけで毎回保存してしまうと、**翌日ダウンロードした際に前日までの過去データが上書き消失** してしまいます。
+そこで本パイプラインでは、取得日付に基づいて **`data/raw/20260726.json` のように日付別のファイル名で保存** し、過去のデータ資産を安全に手元へ蓄積する設計を採用しています。
+
+##### 2. `mise` による日付別 JSON データの自動取得
+ターミナルから以下のタスクコマンドを実行すると、当日の日付（`YYYYMMDD`）を自動付与して `data/raw/YYYYMMDD.json` へ安全に保存されます。
 
 ```bash
-# boatraceopenapi から本日の全場レースデータ (JSON) を自動取得
+# boatraceopenapi から本日のレースデータを日付別 JSON (data/raw/YYYYMMDD.json) として自動取得
 mise run data:download:json
 ```
 
-##### 3. Racket 標準 `(require json)` による JSON パース（`code/ch02-json-parser.rkt`）
-Racket には標準で JSON を扱う強力なライブラリ `(require json)` が備わっています。これを使うと、正規表現や複雑な HTML タグ解析を書くことなく、ハッシュテーブル (`hash`) として一発でデータを抽出し、CSV ファイルへ自動変換できます。
+##### 3. Racket による全 JSON ファイルの自動スキャン & 蓄積パース（`code/ch02-json-parser.rkt`）
+Racket の標準ライブラリ `(require json)` を使い、`data/raw/` ディレクトリ配下に蓄積されたすべての `*.json` ファイルを自動検出して順次パースし、単一の構造化 CSV (`data/parsed_races.csv`) へと集約結合します。
 
 付属ソースコード [code/ch02-json-parser.rkt](file:///home/mevius/my-project/mypublish-racket-statistics/code/ch02-json-parser.rkt) の主要ロジックは以下の通りです。
 
@@ -41,19 +44,23 @@ Racket には標準で JSON を扱う強力なライブラリ `(require json)` �
 #lang racket
 (require json)
 
-;; 1. JSON ファイルを読み込み、Racket ハッシュに変換
-(define data (call-with-input-file "data/raw/today.json" read-json))
+;; 1. data/raw 配下の全 *.json ファイル（過去の日付分含む）を全自動検出
+(define target-files
+  (filter (lambda (p) (string-suffix? (path->string p) ".json"))
+          (directory-list "data/raw" #:build? #t)))
 
-;; 2. programs -> stadiums -> races -> racers を安全に走査して抽出
-;; (RacketFrames の入力形式である CSV data/parsed_races.csv へ書き出し)
+;; 2. 各 JSON ファイルの programs -> stadiums -> races -> racers を走査し結合
+;; (累積データとして CSV data/parsed_races.csv へ書き出し)
 ```
 
 実行は以下のコマンド一発です：
 
 ```bash
-# 【本線】Racket による JSON パース & CSV 変換パイプラインの実行
+# 【本線】Racket による全 JSON スキャン & CSV 蓄積パースの実行
 mise run parse:json
 ```
+
+日々 `mise run data:download:json` と `mise run parse:json` を動かすことで、分析用の過去レースデータが CSV にどんどん蓄積されていきます！
 
 ---
 
@@ -86,11 +93,11 @@ mise run parse:html
 データ分析における 2 つのアプローチの違いを整理しましょう。
 
 ```text
-  【本線パイプライン (JSON API)】
-   [boatraceopenapi API] ─── curl ───> 生JSON (today.json)
+  【本線パイプライン (日付別 JSON 蓄積)】
+   [boatraceopenapi API] ─── curl ───> 日付別JSON (data/raw/YYYYMMDD.json)
                                               │
-                                              ▼ (require json) でパース
-   RacketFrames で分析! <─── CSV保存 <─── 構造化データ (data/parsed_races.csv)
+                                              ▼ (require json) で全自動スキャン
+   RacketFrames で分析! <─── 累積CSV <─── 構造化データ (data/parsed_races.csv)
 
   【従来/応用パイプライン (HTML スクレイピング)】
    [ボートレース公式Web] ─── curl ───> 生HTML (racelist.html)
@@ -99,20 +106,20 @@ mise run parse:html
    RacketFrames で分析! <─── CSV保存 <─── 構造化データ (data/parsed_races.csv)
 ```
 
-1. **構造化 JSON (本線)**: API から提供される最初から整理されたデータ。キー名（`racer_name`, `national_win_rate` 等）で直接アクセスでき、破綻しにくく最も安定しています。
+1. **構造化 JSON 日付別保存 (本線)**: 日々のデータが別名ファイルで蓄積されるため、上書きリスクゼロで安定して時系列分析用データセットを拡張できます。
 2. **生データ HTML (参考/応用)**: Web ページの装飾が含まれた人間用データ。タグ構造が変わるとパースが壊れやすいため、API が存在しない場合の最終手段として役立ちます。
 
 ---
 
 #### 2.4 CSVファイル形式とボートレースデータの構造
 
-パース生成された **CSV（Comma-Separated Values）** 形式のデータ構造は以下の通りです。
+パース生成された **CSV（Comma-Separated Values）** 形式のデータ構造は以下の通りです。日付列 (`date`) が追加され、過去複数日分のデータを識別・比較できます。
 
 ```csv
-stadium_num,race_num,boat_num,racer_id,racer_name,rank,win_rate,motor_rate
-23,11,1,4362,土屋 智則,A1,6.7,33.67
-23,11,2,4289,落合 直子,A2,5.59,33.51
-23,11,3,4216,星 栄爾,B1,4.53,37.44
+date,stadium_num,race_num,boat_num,racer_id,racer_name,rank,win_rate,motor_rate
+2026-07-26,23,11,1,4362,土屋 智則,A1,6.7,33.67
+2026-07-26,23,11,2,4289,落合 直子,A2,5.59,33.51
+2026-07-26,23,11,3,4216,星 栄爾,B1,4.53,37.44
 ...
 ```
 
