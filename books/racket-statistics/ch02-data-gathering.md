@@ -3,8 +3,8 @@ title: "第2章　ボートレースのデータを集める（データ収集�
 ---
 
 > **この章のゴール**  
-> Webや外部ツール（`curl`）を活用してボートレースのデータ（CSV/HTML）を手元に取得し、プログラムで扱える状態にする。生データ（HTML）と構造化データ（CSV）の違い、および `pyjpboatrace` の内部パース構造と Racket での変換方法を理解する。  
-> **使用技術**: Racket `net/url`, `curl` (スリープ・通信速度制限付き), `mise` タスクランナー, Racket による HTML パース  
+> Webや外部ツール（`curl`）を活用してボートレースのデータ（CSV/HTML）を手元に取得し、プログラムで扱える状態にする。生データ（HTML）と構造化データ（CSV）の違い、および `code/ch02-html-parser.rkt` による Racket 単体でのパース変換パイプラインを理解する。  
+> **使用技術**: Racket `net/url`, `curl` (スリープ・通信速度制限付き), `mise` タスクランナー (`mise run parse:html`), Racket による HTML パース  
 
 本章では、統計分析の土台となる「データ収集（スクレイピングとダウンロード）」の手法を学びます。Racket のネットワーク機能を使う方法と、より簡単で確実な外部ツール（`curl`）を `mise` タスクランナーで実行する方法の 2 通りを解説します。
 
@@ -76,27 +76,35 @@ mise run data:download:official
 2. **`pyjpboatrace` などのパース（抽出）ライブラリの役割**:
    Python ライブラリ `pyjpboatrace` などは、この生データ（HTML）を自動ダウンロードし、内部で HTML タグを解析（パース）して、必要な数値（勝率・モーター率・着順）だけを取り出した **CSV や JSON などの構造化データ** へと自動変換しています。
 
-##### ❓ 誰が変換パイプラインを実行するの？ Racket だけでできるの？
+##### 🚀 Racket 単体での HTML パース ＆ CSV 変換（`code/ch02-html-parser.rkt`）
 
-* **誰がやるの？**: Python では `pyjpboatrace` が裏で自動で行っていますが、通常はデータアナリストやエンジニアが前処理プログラムを書いて行います。本書の演習では、受講生がすぐ分析を体験できるよう、著者が前処理を施した **`data/sample_races.csv`** を提供しています。
-* **Racket でできるの？**: **「もちろん 100% Racket だけで可能です！」**  
-  Racket には標準で正規表現 (`regexp`) や HTML/S式変換ライブラリが用意されており、取得した HTML タグから数値を取り出して CSV を自動生成する前処理プログラムを Racket 1本で作成できます！
+「誰が変換パイプラインをやるの？ Racket でできるの？」の答えは、**「Racket 1本だけで 100% 可能！」** です。
+
+付属のソースコード [/home/mevius/my-project/mypublish-racket-statistics/code/ch02-html-parser.rkt](file:///home/mevius/my-project/mypublish-racket-statistics/code/ch02-html-parser.rkt)（タスクコマンド: `mise run parse:html`）を実行すると、Racket 標準の正規表現が HTML から選手名・勝率・モーター率をすくい取り、構造化データ `data/parsed_races.csv` へと全自動変換する様子を体験できます！
 
 ```racket
 #lang racket
-;; 【Racket だけで HTML からデータを取り出して CSV に保存するミニ例】
-(define html-text "<td class='racer'>峰竜太</td><td class='rate'>0.85</td>")
+;; 【code/ch02-html-parser.rkt より抜粋】
+;; 正規表現で HTML タグの中身（艇番・選手名・勝率・モーター率・着順）を一括抽出
+(define boat-pattern #px"<span class='boat'>(.*?)</span>")
+(define racer-pattern #px"<span class='racer'>(.*?)</span>")
+(define win-pattern #px"<span class='win-rate'>(.*?)</span>")
 
-;; 正規表現で HTML タグの中身（選手名と勝率）をすくい取る
-(define racer-name (second (regexp-match #px"<td class='racer'>(.*?)</td>" html-text)))
-(define win-rate (second (regexp-match #px"<td class='rate'>(.*?)</td>" html-text)))
+(define boats (map second (regexp-match* boat-pattern sample-html #:match-select (lambda (m) m))))
+(define racers (map second (regexp-match* racer-pattern sample-html #:match-select (lambda (m) m))))
+(define win-rates (map second (regexp-match* win-pattern sample-html #:match-select (lambda (m) m))))
 
-;; CSV 形式のテキストを作成してファイルへ書き出す！
-(define csv-line (format "~a,~a\n" racer-name win-rate))
-(display-to-file csv-line "data/parsed_races.csv" #:exists 'append)
+;; 構造化 CSV データ (data/parsed_races.csv) として自動書き出し！
+(define out-port (open-output-file "data/parsed_races.csv" #:exists 'replace))
+(displayln "boat_num,racer_name,win_rate,motor_rate,rank" out-port)
 
-(printf "Racket だけで HTML から CSV へのパース変換が完了しました！\n")
+(for ([b boats] [r racers] [w win-rates])
+  (displayln (format "~a,~a,~a" b r w) out-port))
+
+(close-output-port out-port)
 ```
+
+ターミナルで **`mise run parse:html`** を叩くだけで、Racket による HTML パース処理が走ります！
 
 ---
 

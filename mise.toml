@@ -18,6 +18,11 @@ sleep 1
 echo "Download complete: data/raw/racelist_sample.html"
 '''
 
+[tasks."parse:html"]
+description = "第2章：Racket 単体で HTML 生データをパースし構造化 CSV データを生成する"
+shell = "bash -c"
+run = "racket code/ch02-html-parser.rkt"
+
 [tasks."analysis:summary"]
 description = "第4章：枠番別の平均着順と勝率を一括集計する"
 shell = "bash -c"
@@ -41,4 +46,4 @@ run = "npx zenn preview"
 [tasks."test:racket"]
 description = "code/ 配下の Racket サンプルプログラムを一括テスト"
 shell = "bash -c"
-run = "racket code/ch01-basics.rkt && racket code/ch03-racketframes-basics.rkt && racket code/ch04-analysis.rkt && racket code/ch05-visualization.rkt && racket code/ch06-prediction.rkt"
+run = "racket code/ch01-basics.rkt && racket code/ch02-html-parser.rkt && racket code/ch03-racketframes-basics.rkt && racket code/ch04-analysis.rkt && racket code/ch05-visualization.rkt && racket code/ch06-prediction.rkt"
