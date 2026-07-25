@@ -244,3 +244,11 @@ racket code/ch03-racketframes-basics.rkt
 ```
 
 次章では、この「直近 $N$ レース抽出データ」を使って、平均や勝率の本格的な統計計算を行っていきます！
+
+---
+
+#### 3.10 章のまとめ：三角ロジックによる整理
+
+* **【主張 (Claim)】**: RacketFramesを用いることで、期間蓄積データから指定のサンプルサイズ$N$を型安全かつ高速にスライス抽出できる。
+* **【事実・データ (Fact)】**: `ISeries`/`NSeries`/`CSeries`の型管理と、直近$N$レースを最新順に自動抽出する`df-take-recent-races`関数（`code/ch03-racketframes-basics.rkt`）。
+* **【論拠・理由付け (Reasoning)】**: 住所の役割を果たすIndexと型分離により$O(1)$検索と整列計算が実現され、元データを破壊せず厳密な件数$N$をスライスできるため。
