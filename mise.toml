@@ -1,11 +1,148 @@
+# ==============================================================================
+# ボートレース統計入門 (mypublish-racket-statistics) タスクランナー設定 (mise.toml)
+#
+# 【データダウンロードタスク メニューガイド】
+#   1. mise run data:download:today  : 本日分データのみ日付確認なしで一発自動取得
+#   2. mise run data:download:json   : 単日指定（本日または過去指定日）を対話確認して取得
+#   3. mise run data:download:range  : 過去の期間（開始日〜終了日）を一括指定して連続取得
+#   4. mise run data:download:official: 公式WebからHTML生データを取得 (スクレイピング参考)
+#   5. mise run parse:json           : data/raw/*.json の全データをスキャンし、集約 CSV を自動生成
+#   6. mise run test:racket          : code/ 配下の Racket サンプルプログラムを一括自動テスト
+#   7. mise run book:preview         : Zenn CLI ローカルプレビューサーバーを起動
+# ==============================================================================
+
 [env]
 NODE_ENV = "development"
 
+# ------------------------------------------------------------------------------
+# 1. データダウンロードタスク群 (Data Download Tasks)
+# ------------------------------------------------------------------------------
+
+# 1.1 【本線デフォルト】本日分データダウンロード (ショートカット)
+# 概要: mise run data:download:today を呼び出して本日の最新データを自動取得
+# 使い方: mise run data:download
 [tasks."data:download"]
-description = "ボートレースの公式サンプルデータ(CSV)を自動ダウンロードする"
+description = "【本線デフォルト】data:download:today を呼び出して本日のレースデータ (JSON) を自動取得"
+depends = ["data:download:today"]
+
+# 1.2 【本線】本日分データ無確認一括ダウンロード (日付指定なし)
+# 概要: ユーザーへの日付確認プロンプトを出さず、本日の全場レースデータ (YYYYMMDD.json) を一発で取得保存
+# 使い方: mise run data:download:today
+[tasks."data:download:today"]
+description = "【本線】日付確認なしで本日のボートレースデータ (YYYYMMDD.json) を自動ダウンロード保存"
+shell = "bash -c"
+run = '''
+set -euo pipefail
+TODAY=$(date +%Y%m%d)
+YEAR=$(date +%Y)
+mkdir -p data/raw
+
+echo "本日のボートレースデータ (${TODAY}) を自動ダウンロードしています..."
+
+if curl -fs --limit-rate 100k -o "data/raw/${TODAY}.json" "https://boatraceopenapi.github.io/api/v1/${YEAR}/${TODAY}.json"; then
+  echo "ダウンロード完了: data/raw/${TODAY}.json"
+else
+  echo "本日用リンク (today.json) から取得します..."
+  curl -s --limit-rate 100k -o "data/raw/${TODAY}.json" "https://boatraceopenapi.github.io/api/v1/today.json"
+  echo "ダウンロード完了: data/raw/${TODAY}.json"
+fi
+'''
+
+# 1.3 【本線】単日データ対話指定ダウンロード (過去日指定可)
+# 概要: ダウンロード前に日付確認プロンプトを表示し、本日または指定の過去日 (YYYYMMDD) データを保存
+# 使い方: mise run data:download:json  (環境変数指定: TARGET_DATE=20260501 mise run data:download:json)
+[tasks."data:download:json"]
+description = "【本線】日付を確認・入力（過去日指定可）し、boatraceopenapi からレースデータ (YYYYMMDD.json) を取得保存"
+shell = "bash -c"
+run = '''
+set -euo pipefail
+DEFAULT_DATE=$(date +%Y%m%d)
+
+if [ -t 0 ] && [ -z "${TARGET_DATE:-}" ]; then
+  read -r -p "取得対象の日付を入力してください (YYYYMMDD) [デフォルト: ${DEFAULT_DATE}]: " INPUT_DATE
+  TARGET_DATE="${INPUT_DATE:-$DEFAULT_DATE}"
+else
+  TARGET_DATE="${TARGET_DATE:-$DEFAULT_DATE}"
+fi
+
+YEAR="${TARGET_DATE:0:4}"
+mkdir -p data/raw
+
+echo "ボートレースデータ (対象日: ${TARGET_DATE}) をダウンロードしています..."
+
+if curl -fs --limit-rate 100k -o "data/raw/${TARGET_DATE}.json" "https://boatraceopenapi.github.io/api/v1/${YEAR}/${TARGET_DATE}.json"; then
+  echo "ダウンロード完了: data/raw/${TARGET_DATE}.json"
+else
+  echo "指定日付 (${TARGET_DATE}.json) の専用ファイルが見つからないため、today.json を取得します..."
+  curl -s --limit-rate 100k -o "data/raw/${TARGET_DATE}.json" "https://boatraceopenapi.github.io/api/v1/today.json"
+  echo "ダウンロード完了: data/raw/${TARGET_DATE}.json"
+fi
+'''
+
+# 1.4 【本線・期間指定】期間指定一括データダウンロード (過去複数日対応)
+# 概要: 開始日 (START_DATE) と終了日 (END_DATE) を対話入力し、指定期間内の過去データを一括蓄積取得
+# 使い方: mise run data:download:range (環境変数指定: START_DATE=20260701 END_DATE=20260705 mise run data:download:range)
+[tasks."data:download:range"]
+description = "【本線・期間指定】開始日と終了日 (YYYYMMDD) を指定して過去の複数日レースデータを一括ダウンロード・保存"
+shell = "bash -c"
+run = '''
+set -euo pipefail
+DEFAULT_END=$(date +%Y%m%d)
+DEFAULT_START=$(date -d "7 days ago" +%Y%m%d 2>/dev/null || date +%Y%m%d)
+
+if [ -t 0 ] && [ -z "${START_DATE:-}" ]; then
+  read -r -p "開始日を入力してください (YYYYMMDD) [デフォルト: ${DEFAULT_START}]: " INPUT_START
+  START_DATE="${INPUT_START:-$DEFAULT_START}"
+else
+  START_DATE="${START_DATE:-$DEFAULT_START}"
+fi
+
+if [ -t 0 ] && [ -z "${END_DATE:-}" ]; then
+  read -r -p "終了日を入力してください (YYYYMMDD) [デフォルト: ${DEFAULT_END}]: " INPUT_END
+  END_DATE="${INPUT_END:-$DEFAULT_END}"
+else
+  END_DATE="${END_DATE:-$DEFAULT_END}"
+fi
+
+mkdir -p data/raw
+
+CURRENT_SEC=$(date -d "$START_DATE" +%s)
+END_SEC=$(date -d "$END_DATE" +%s)
+
+echo "=========================================================="
+echo " 期間指定ダウンロード開始: ${START_DATE} 〜 ${END_DATE}"
+echo "=========================================================="
+
+while [ "$CURRENT_SEC" -le "$END_SEC" ]; do
+  CURR_DATE=$(date -d "@$CURRENT_SEC" +%Y%m%d)
+  YEAR="${CURR_DATE:0:4}"
+  
+  echo -n "[${CURR_DATE}] 取得中... "
+  if curl -fs --limit-rate 100k -o "data/raw/${CURR_DATE}.json" "https://boatraceopenapi.github.io/api/v1/${YEAR}/${CURR_DATE}.json"; then
+    echo "成功 -> data/raw/${CURR_DATE}.json"
+  else
+    echo "該当なし/スキップ"
+    rm -f "data/raw/${CURR_DATE}.json"
+  fi
+  
+  sleep 1
+  CURRENT_SEC=$((CURRENT_SEC + 86400))
+done
+
+echo "期間指定ダウンロードが完了しました！"
+'''
+
+# 1.5 公式サンプル CSV ダウンロード (補足用)
+# 概要: リポジトリ同梱のサンプル CSV をダウンロード
+# 使い方: mise run data:download:sample
+[tasks."data:download:sample"]
+description = "ボートレースの公式サンプルデータ (CSV) を自動ダウンロードする"
 shell = "bash -c"
 run = "mkdir -p data && curl -s --limit-rate 100k -o data/sample_races.csv https://raw.githubusercontent.com/bluehive/mypublish-racket-statistics/main/data/sample_races.csv"
 
+# 1.6 【参考・応用】ボートレース公式 HTML ダウンロード
+# 概要: 公式 Web サイトから 1 レース分の HTML を通信速度制限・スリープ付きで取得
+# 使い方: mise run data:download:official
 [tasks."data:download:official"]
 description = "pyjpboatrace に学ぶ: ボートレース公式Webサイトから本日の出走表HTMLを curl で安全に自動取得する"
 shell = "bash -c"
@@ -18,32 +155,66 @@ sleep 1
 echo "Download complete: data/raw/racelist_sample.html"
 '''
 
+# ------------------------------------------------------------------------------
+# 2. データパースタスク群 (Data Parsing Tasks)
+# ------------------------------------------------------------------------------
+
+# 2.1 【本線】Racket による全 JSON スキャン & CSV 蓄積パース
+# 概要: data/raw/*.json の全ファイルを自動スキャンして Racket で一括パースし、data/parsed_races.csv に保存
+# 使い方: mise run parse:json
+[tasks."parse:json"]
+description = "【本線】第2章：data/raw/*.json の全ファイルを自動スキャンして Racket (require json) でパースし構造化 CSV を生成する"
+shell = "bash -c"
+run = "racket code/ch02-json-parser.rkt"
+
+# 2.2 【参考・応用】Racket による HTML パース
+# 概要: 正規表現を用いて HTML 生データから必要な列をすくい取り CSV を生成
+# 使い方: mise run parse:html
 [tasks."parse:html"]
-description = "第2章：Racket 単体で HTML 生データをパースし構造化 CSV データを生成する"
+description = "第2章（参考）：Racket 単体で HTML 生データをパースし構造化 CSV データを生成する"
 shell = "bash -c"
 run = "racket code/ch02-html-parser.rkt"
 
+# ------------------------------------------------------------------------------
+# 3. 各章分析・可視化・予測モデルタスク群 (Book Code Tasks)
+# ------------------------------------------------------------------------------
+
+# 3.1 第4章: 統計集計タスク
+# 使い方: mise run analysis:summary
 [tasks."analysis:summary"]
 description = "第4章：枠番別の平均着順と勝率を一括集計する"
 shell = "bash -c"
 run = "racket code/ch04-analysis.rkt"
 
+# 3.2 第5章: プロット可視化タスク
+# 使い方: mise run plot:scatter
 [tasks."plot:scatter"]
 description = "第5章【最推しグラフ】：モーター2連対率 vs 確定着順の散布図を一発描画する"
 shell = "bash -c"
 run = "racket code/ch05-visualization.rkt"
 
+# 3.3 第6章: 予測スコアモデル検証タスク
+# 使い方: mise run model:predict
 [tasks."model:predict"]
 description = "第6章【クライマックス】：予想スコアモデルの計算と的中率の答え合わせテストを一括実行する"
 shell = "bash -c"
 run = "racket code/ch06-prediction.rkt"
 
+# ------------------------------------------------------------------------------
+# 4. ローカルプレビュー & テストタスク群 (Preview & Test Tasks)
+# ------------------------------------------------------------------------------
+
+# 4.1 Zenn CLI プレビュー起動
+# 使い方: mise run book:preview
 [tasks."book:preview"]
 description = "Zenn CLI プレビューをローカルで起動する (http://localhost:8000)"
 shell = "bash -c"
 run = "npx zenn preview"
 
+# 4.2 全 Racket サンプル一括自動テスト
+# 概要: code/ 配下の全 7 スクリプトを順次実行し、エラーなく完走するか検証
+# 使い方: mise run test:racket
 [tasks."test:racket"]
-description = "code/ 配下の Racket サンプルプログラムを一括テスト"
+description = "code/配下の Racket サンプルプログラムを一括テスト"
 shell = "bash -c"
-run = "racket code/ch01-basics.rkt && racket code/ch02-html-parser.rkt && racket code/ch03-racketframes-basics.rkt && racket code/ch04-analysis.rkt && racket code/ch05-visualization.rkt && racket code/ch06-prediction.rkt"
+run = "racket code/ch01-basics.rkt && racket code/ch02-json-parser.rkt && racket code/ch02-html-parser.rkt && racket code/ch03-racketframes-basics.rkt && racket code/ch04-analysis.rkt && racket code/ch05-visualization.rkt && racket code/ch06-prediction.rkt"

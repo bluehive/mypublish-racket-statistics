@@ -9,7 +9,7 @@
     "new:book": "zenn new:book"
   },
   "devDependencies": {
-    "zenn-cli": "^0.1.158"
+    "zenn-cli": "^0.5.2"
   },
   "engines": {
     "node": ">=18"

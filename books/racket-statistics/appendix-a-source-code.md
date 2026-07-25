@@ -21,9 +21,12 @@ racket code/ch01-basics.rkt
 * **[ch01-basics.rkt](https://github.com/bluehive/mypublish-racket-statistics/blob/main/code/ch01-basics.rkt)**
   * **章**: 第1章
   * **役割**: Racket 基本文法、`define`、`cond`、リスト・ハッシュ構造の動作サンプル
-* **[ch02-fetch-data.rkt](https://github.com/bluehive/mypublish-racket-statistics/blob/main/code/ch02-fetch-data.rkt)**
-  * **章**: 第2章
-  * **役割**: `net/url` を用いた Web データのダウンロード処理
+* **[ch02-json-parser.rkt](https://github.com/bluehive/mypublish-racket-statistics/blob/main/code/ch02-json-parser.rkt)**
+  * **章**: 第2章【本線】
+  * **役割**: `boatraceopenapi` 構造化 JSON (`today.json`) を `(require json)` で一発パースし構造化 CSV を自動生成
+* **[ch02-html-parser.rkt](https://github.com/bluehive/mypublish-racket-statistics/blob/main/code/ch02-html-parser.rkt)**
+  * **章**: 第2章【参考・応用】
+  * **役割**: 公式 Web サイトの HTML 生データを Racket の正規表現でパースし構造化 CSV へ変換
 * **[ch03-racketframes-basics.rkt](https://github.com/bluehive/mypublish-racket-statistics/blob/main/code/ch03-racketframes-basics.rkt)**
   * **章**: 第3章
   * **役割**: RacketFrames による CSV 読み込み（`read-csv`）、列操作（`df-project`）、欠損値除去（`df-drop-na`）
@@ -41,7 +44,3 @@ racket code/ch01-basics.rkt
 
 1. 各章の本文を読みながら、対応する `code/ch0N-....rkt` を DrRacket で開き **Run** ボタンを押して実行してください。
 2. 動作確認や実験は、相互作用ウィンドウ（下段 REPL）で関数を個別に呼び出して行えます。
-
----
-
-* ※付属コード構成の整理：三角ロジックで整理予定
