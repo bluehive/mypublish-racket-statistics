@@ -27,6 +27,10 @@ output/*
 !output/racket-statistics/.gitkeep
 !output/racket-statistics/README.md
 
+# Generated data files
+data/raw/
+data/parsed_races.csv
+
 # Local only
 notes/private/
 drafts/_scratch/
