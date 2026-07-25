@@ -1,0 +1,17 @@
+{
+  "name": "mypublish-racket-statistics",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ボートレース統計入門 — Zenn book + EPUB (Grok 4.5)",
+  "scripts": {
+    "preview": "zenn preview",
+    "new:article": "zenn new:article",
+    "new:book": "zenn new:book"
+  },
+  "devDependencies": {
+    "zenn-cli": "^0.1.158"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

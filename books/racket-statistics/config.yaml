@@ -1,0 +1,19 @@
+title: "ボートレース統計入門"
+summary: "Racket（通常言語）とデータフレームライブラリ「RacketFrames」を用いて、データ解析・統計処理・簡易予測モデルを体験する、文系大学生（初心者）向けの実習書。"
+topics: ["Racket", "RacketFrames", "統計学", "データ分析", "プログラミング入門"]
+published: true
+price: 0
+chapters:
+  - intro
+  - ch01-basics
+  - ch02-data-gathering
+  - ch03-racketframes-basics
+  - ch04-racketframes-analysis
+  - ch05-racketframes-visualization
+  - ch06-prediction-model
+  - appendix-a-source-code
+  - appendix-b-glossary
+  - appendix-c-debugging
+  - appendix-d-automation
+
+toc_depth: 2

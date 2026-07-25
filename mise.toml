@@ -1,0 +1,71 @@
+# mypublish-racket-statistics — mise tools & tasks
+
+[tools]
+node = "22"
+watchexec = "2"
+
+[tasks."zenn:preview"]
+description = "Zenn CLI プレビュー (localhost:8000)"
+run = "npx zenn preview"
+
+[tasks."zenn:preview-port"]
+description = "Zenn プレビュー（ポート指定: PORT=3000 mise run zenn:preview-port）"
+run = "npx zenn preview --port ${PORT:-3000}"
+
+[tasks."zenn:deploy"]
+description = "Zenn.dev に電子書籍をアップロード (git push origin main)"
+run = "git push origin main"
+
+[tasks."test:racket"]
+description = "code/ 配下の Racket コードを racket で実行（テスト）"
+sources = ["code/**/*.rkt", "code/*.rkt"]
+outputs = []
+shell = "bash -c"
+run = '''
+set -euo pipefail
+if ! command -v racket >/dev/null 2>&1; then
+  echo "racket not found. Install Racket first."
+  exit 1
+fi
+shopt -s nullglob
+found=0
+for f in code/*.rkt; do
+  [ -f "$f" ] || continue
+  found=1
+  echo "=== racket $f ==="
+  racket "$f"
+done
+if [ "$found" -eq 0 ]; then
+  echo "no .rkt files under code/"
+fi
+'''
+
+[tasks."ci:test"]
+description = "ローカル CI ゲート: テスト一発"
+depends = ["test:racket"]
+
+[tasks."watch:test"]
+description = "code/ 変更で test:racket を自動再実行"
+run = "mise watch test:racket --clear --on-busy-update=queue"
+
+[tasks."book:combine"]
+description = "books/ 章を manuscript/.../book.md に結合"
+run = "python3 scripts/racket-statistics/combine_drafts.py"
+
+[tasks."book:epub"]
+description = "横書き EPUB 生成 + verify（要 pandoc）"
+shell = "bash -c"
+run = '''
+set -euo pipefail
+python3 scripts/racket-statistics/combine_drafts.py
+python3 scripts/racket-statistics/build.py --format epub-horizontal --no-cover --verify
+'''
+
+[tasks."book:epub-vertical"]
+description = "縦書き EPUB 生成 + verify"
+shell = "bash -c"
+run = '''
+set -euo pipefail
+python3 scripts/racket-statistics/combine_drafts.py
+python3 scripts/racket-statistics/build.py --format epub-vertical --no-cover --verify
+'''
