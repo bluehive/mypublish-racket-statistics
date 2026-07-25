@@ -4,36 +4,44 @@ title: "第2章　ボートレースのデータを集める（データ収集�
 
 > **この章のゴール**  
 > Webや外部ツール（`curl`）およびオープンAPI（`boatraceopenapi`）を活用してボートレースのデータ（JSON/HTML）を手元に取得し、プログラムで扱える構造化CSVへと変換する。  
-> **【本線】**: `boatraceopenapi` から日付別 JSON (`data/raw/YYYYMMDD.json`) を取得保存し、Racket 標準の `(require json)` で日付別ファイルを全自動スキャン＆蓄積パース（`code/ch02-json-parser.rkt`）。上書きによるデータ消失を防ぎ、日々データを積み重ねる設計を理解する。  
+> **【本線】**: `boatraceopenapi` から対話的日付確認（過去日指定可）により日付別 JSON (`data/raw/YYYYMMDD.json`) をダウンロード保存し、Racket 標準の `(require json)` で日付別ファイルを全自動スキャン＆蓄積パース（`code/ch02-json-parser.rkt`）。  
 > **【参考・応用】**: 公式Webサイト（HTML生データ）の `curl` 取得と正規表現パース（`code/ch02-html-parser.rkt`）。  
 > **使用技術**: Racket `net/url`, `json`, `curl`, `mise` タスクランナー (`mise run parse:json`, `mise run parse:html`)
 
-本章では、統計分析の土台となる「データ収集」の手法を学びます。現在ではボートレースのデータをオープンデータとして JSON 形式で配信する **`boatraceopenapi/api`** が存在するため、本章では **「日付別 JSON データを手元に蓄積保存し、Racket で一括パースする手法」を本線** として解説します。
+本章では、統計分析の土台となる「データ収集」の手法を学びます。現在ではボートレースのデータをオープンデータとして JSON 形式で配信する **`boatraceopenapi/api`** が存在するため、本章では **「対話的な日付指定で JSON データを蓄積保存し、Racket で一括パースする手法」を本線** として解説します。
 
 また、従来手法や他言語ライブラリ（`pyjpboatrace` 等）でよく行われている **「公式Webサイトから HTML 生データをダウンロードしてパースする手法」** も発展学習として併せて解説します。
 
 ---
 
-#### 2.1 【本線】オープンデータ API から日付別 JSON を取得・蓄積してパースする
+#### 2.1 【本線】オープンデータ API から日付指定 JSON を取得・蓄積してパースする
 
 最もしっくりかつ確実なデータ収集法は、すでに構造化されて提供されている **JSON データ API** を活用することです。
 
-##### 1. `boatraceopenapi/api` と日付別保存の重要性
+##### 1. `boatraceopenapi/api` と日付選択・保存の仕組み
 [boatraceopenapi/api](https://github.com/boatraceopenapi/api) では、日付ごとのレースデータ（出走表・直前情報・確定着順）が以下の URL で配信されています。
 
 - **本日のデータ**: `https://boatraceopenapi.github.io/api/v1/today.json`
-- **日付指定データ**: `https://boatraceopenapi.github.io/api/v1/YYYY/YYYYMMDD.json`
+- **日付指定データ（2026年01月01日以降）**: `https://boatraceopenapi.github.io/api/v1/YYYY/YYYYMMDD.json`
 
-固定の `today.json` というファイル名だけで毎回保存してしまうと、**翌日ダウンロードした際に前日までの過去データが上書き消失** してしまいます。
-そこで本パイプラインでは、取得日付に基づいて **`data/raw/20260726.json` のように日付別のファイル名で保存** し、過去のデータ資産を安全に手元へ蓄積する設計を採用しています。
+固定の `today.json` というファイル名だけで保存してしまうと、**翌日ダウンロードした際に前日までの過去データが上書き消失** してしまいます。
+そこで本タスクでは、ダウンロード前にユーザーへ日付の確認・入力（デフォルトは本日 `YYYYMMDD`、過去日付の直接入力も可）を促し、**`data/raw/YYYYMMDD.json` として日付別に保存** する安全な設計を採用しています。
 
-##### 2. `mise` による日付別 JSON データの自動取得
-ターミナルから以下のタスクコマンドを実行すると、当日の日付（`YYYYMMDD`）を自動付与して `data/raw/YYYYMMDD.json` へ安全に保存されます。
+##### 2. `mise` による対話的日付確認とダウンロード
+ターミナルから以下のタスクコマンドを実行すると、対話プロンプトが表示され、そのまま Enter を押すと本日のデータ、過去の日付（例: `20260501`）を入力するとその日の過去データが自動取得されます。
 
 ```bash
-# boatraceopenapi から本日のレースデータを日付別 JSON (data/raw/YYYYMMDD.json) として自動取得
+# boatraceopenapi からレースデータを対話的日付確認（過去日指定可）でダウンロード保存
 mise run data:download:json
 ```
+
+```text
+取得対象の日付を入力してください (YYYYMMDD) [デフォルト: 20260726]: 20260501
+ボートレースデータ (対象日: 20260501) をダウンロードしています...
+ダウンロード完了: data/raw/20260501.json
+```
+
+※ 環境変数 `TARGET_DATE=20260501 mise run data:download:json` を指定すると、非対話環境（CI/自動化スクリプトなど）でも直接特定の過去データを取得できます。
 
 ##### 3. Racket による全 JSON ファイルの自動スキャン & 蓄積パース（`code/ch02-json-parser.rkt`）
 Racket の標準ライブラリ `(require json)` を使い、`data/raw/` ディレクトリ配下に蓄積されたすべての `*.json` ファイルを自動検出して順次パースし、単一の構造化 CSV (`data/parsed_races.csv`) へと集約結合します。
@@ -93,10 +101,10 @@ mise run parse:html
 データ分析における 2 つのアプローチの違いを整理しましょう。
 
 ```text
-  【本線パイプライン (日付別 JSON 蓄積)】
-   [boatraceopenapi API] ─── curl ───> 日付別JSON (data/raw/YYYYMMDD.json)
-                                              │
-                                              ▼ (require json) で全自動スキャン
+  【本線パイプライン (対話的日付指定 ＆ 日付別 JSON 蓄積)】
+   [対話的日付確認] ───> [boatraceopenapi API] ─── curl ───> 日付別JSON (data/raw/YYYYMMDD.json)
+                                                                       │
+                                                                       ▼ (require json) で全自動スキャン
    RacketFrames で分析! <─── 累積CSV <─── 構造化データ (data/parsed_races.csv)
 
   【従来/応用パイプライン (HTML スクレイピング)】
@@ -106,7 +114,7 @@ mise run parse:html
    RacketFrames で分析! <─── CSV保存 <─── 構造化データ (data/parsed_races.csv)
 ```
 
-1. **構造化 JSON 日付別保存 (本線)**: 日々のデータが別名ファイルで蓄積されるため、上書きリスクゼロで安定して時系列分析用データセットを拡張できます。
+1. **構造化 JSON 日付別保存 (本線)**: 対話的に過去日付を指定して取得でき、日々のデータが別名ファイルで蓄積されるため、上書きリスクゼロで安定して時系列分析用データセットを拡張できます。
 2. **生データ HTML (参考/応用)**: Web ページの装飾が含まれた人間用データ。タグ構造が変わるとパースが壊れやすいため、API が存在しない場合の最終手段として役立ちます。
 
 ---

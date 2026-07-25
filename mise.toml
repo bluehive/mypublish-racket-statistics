@@ -6,16 +6,31 @@ description = "【本線デフォルトエイリアス】data:download:json を�
 depends = ["data:download:json"]
 
 [tasks."data:download:json"]
-description = "【本線】boatraceopenapi から本日の全場レースデータ (日付別 JSON: YYYYMMDD.json) を安全に自動取得・保存する"
+description = "【本線】取得対象日付を確認・入力（過去日指定可）し、boatraceopenapi からレースデータ (YYYYMMDD.json) を取得保存する"
 shell = "bash -c"
 run = '''
 set -euo pipefail
-TODAY=$(date +%Y%m%d)
-YEAR=$(date +%Y)
+DEFAULT_DATE=$(date +%Y%m%d)
+
+if [ -t 0 ] && [ -z "${TARGET_DATE:-}" ]; then
+  read -r -p "取得対象の日付を入力してください (YYYYMMDD) [デフォルト: ${DEFAULT_DATE}]: " INPUT_DATE
+  TARGET_DATE="${INPUT_DATE:-$DEFAULT_DATE}"
+else
+  TARGET_DATE="${TARGET_DATE:-$DEFAULT_DATE}"
+fi
+
+YEAR="${TARGET_DATE:0:4}"
 mkdir -p data/raw
-echo "Downloading boatraceopenapi daily data (${TODAY}.json)..."
-curl -s --limit-rate 100k -o "data/raw/${TODAY}.json" "https://boatraceopenapi.github.io/api/v1/${YEAR}/${TODAY}.json" || curl -s --limit-rate 100k -o "data/raw/${TODAY}.json" "https://boatraceopenapi.github.io/api/v1/today.json"
-echo "Download complete: data/raw/${TODAY}.json"
+
+echo "ボートレースデータ (対象日: ${TARGET_DATE}) をダウンロードしています..."
+
+if curl -fs --limit-rate 100k -o "data/raw/${TARGET_DATE}.json" "https://boatraceopenapi.github.io/api/v1/${YEAR}/${TARGET_DATE}.json"; then
+  echo "ダウンロード完了: data/raw/${TARGET_DATE}.json"
+else
+  echo "指定日付 (${TARGET_DATE}.json) の専用ファイルが見つからないため、today.json を取得します..."
+  curl -s --limit-rate 100k -o "data/raw/${TARGET_DATE}.json" "https://boatraceopenapi.github.io/api/v1/today.json"
+  echo "ダウンロード完了: data/raw/${TARGET_DATE}.json"
+fi
 '''
 
 [tasks."data:download:sample"]
