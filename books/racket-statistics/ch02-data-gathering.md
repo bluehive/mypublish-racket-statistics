@@ -3,8 +3,8 @@ title: "第2章　ボートレースのデータを集める（データ収集�
 ---
 
 > **この章のゴール**  
-> Webや外部ツール（`curl`）を活用してボートレースのデータ（CSV/テキスト）を手元に取得し、プログラムで扱える状態にする。付属のサンプルデータ（`code/sample_races.csv` / `data/sample_races.csv`）の構成を理解する。  
-> **使用技術**: Racket `net/url`, `curl`, `mise` タスクランナー  
+> Webや外部ツール（`curl`）を活用してボートレースのデータ（CSV/HTML）を手元に取得し、プログラムで扱える状態にする。生データ（HTML）と構造化データ（CSV）の違い、および `code/ch02-html-parser.rkt` による Racket 単体でのパース変換パイプラインを理解する。  
+> **使用技術**: Racket `net/url`, `curl` (スリープ・通信速度制限付き), `mise` タスクランナー (`mise run parse:html`), Racket による HTML パース  
 
 本章では、統計分析の土台となる「データ収集（スクレイピングとダウンロード）」の手法を学びます。Racket のネットワーク機能を使う方法と、より簡単で確実な外部ツール（`curl`）を `mise` タスクランナーで実行する方法の 2 通りを解説します。
 
@@ -30,41 +30,87 @@ Racket には、標準でネットワーク通信を行うためのライブラ�
 
 この方法を使うことで、プログラムの中から直接最新のデータを取得できます。
 
-#### 2.2 データのダウンロードが難しい場合の代替策（`curl` と `mise`）
+#### 2.2 データのダウンロードが難しい場合の代替策（`curl` と `mise` タスクランナー）
 
 Web サイトによっては、高度なアクセス制御（JavaScriptの実行要求など）が施されている場合があります。また、通信処理のコードを毎回書くのが大変な場合もあります。
 
 そこで、より簡単かつ確実にデータを一括ダウンロードするための代替策として、強力なコマンドラインツール **`curl`** と、タスクランナー **`mise`** を組み合わせた手法を活用します。
 
-##### 1. コマンドラインでの `curl` の実行
-ターミナル（またはコマンドプロンプト）から、以下のコマンドを実行すると、リポジトリに配置されている公式サンプルデータ（`sample_races.csv`）を手元のフォルダに保存できます。
+##### 1. コマンドラインでの `curl` の安全な実行
+ターミナルから以下のコマンドを実行すると、リポジトリに配置されている公式サンプルデータ（`sample_races.csv`）を、サーバー負荷を下げる **`--limit-rate 100k`（速度制限オプション）** 付きで手元のフォルダに安全に保存できます。
 
 ```bash
-# サンプルデータのダウンロード例
-curl -s -o data/races.csv "https://raw.githubusercontent.com/bluehive/mypublish-racket-statistics/main/data/sample_races.csv"
+# サンプルデータの安全なダウンロード例 (通信速度制限 --limit-rate 100k 付き)
+curl -s --limit-rate 100k -o data/sample_races.csv "https://raw.githubusercontent.com/bluehive/mypublish-racket-statistics/main/data/sample_races.csv"
 ```
 
-##### 2. `mise.toml` によるダウンロードタスクの自動化
-プロジェクトのルートにある `mise.toml` に、以下のようなタスクを記述しておくと、複雑なコマンドを覚える必要がなくなります。
+##### 2. `mise.toml` による公式Webデータ取得タスクの自動化
+後述の `pyjpboatrace` のURL構造を参考に、ボートレース公式Webサイトから本日の出走表データ（HTML）を `curl` で安全に自動取得するタスクが `mise.toml` に用意されています。このタスクには **`--limit-rate 100k` オプションと `sleep 1` 秒のアクセス待ち時間** が組み込まれています。
 
-```toml
-[tasks."data:download"]
-description = "ボートレースのサンプルデータ(CSV)を自動ダウンロードする"
-shell = "bash -c"
-run = '''
-set -euo pipefail
-mkdir -p data
-echo "Downloading race data..."
-curl -s -o data/races.csv "https://raw.githubusercontent.com/bluehive/mypublish-racket-statistics/main/data/sample_races.csv"
-echo "Download complete: data/races.csv"
-'''
+```bash
+# ボートレース公式Webサイトから出走表HTMLを安全に自動取得する (スリープ・速度制限付き)
+mise run data:download:official
 ```
 
-あとはターミナルで **`mise run data:download`** と打つだけで、いつでも最新の解析用データが手元にセットアップされます。付属のソースコードフォルダ（`code/`）内にも予備の `code/sample_races.csv` が保管されています。
+実行すると、`data/raw/racelist_sample.html` に最新の出走表データが保存されます。
 
-#### 2.3 CSVファイル形式とボートレースデータの構造
+---
 
-ダウンロードしたデータは、扱いやすい **CSV（Comma-Separated Values）** 形式で保存されます。CSV は、データをカンマ `,` で区切った単純なテキストファイルです。
+#### 2.3 💡 なぜ公式データは HTML なのか？（生データと CSV のデータパイプライン）
+
+ここで「`curl` でボートレース公式Webサイト（`boatrace.jp`）からダウンロードしたデータは、なぜ CSV ではなく **HTML**（Webページの見た目用ファイル）なのか？」という疑問が浮かぶかもしれません。
+
+これこそがデータサイエンスにおける **「生データ（Raw Data）」** と **「構造化データ（Structured Data / CSV）」** の重要な違いです！
+
+```text
+  【ボートレースデータの変換パイプライン (pyjpboatrace などの内部構造)】
+
+   ① [ボートレース公式Web] ─── curl ───> ② 生データ (HTML / 公式テキストTXT)
+                                                 │
+                                                 ▼ (前処理・HTMLパース処理)
+   ④ RacketFrames で分析! <─── CSV保存 <─── ③ 構造化データ (CSV / JSON)
+```
+
+1. **公式Webサイトの生データ (Raw Data / HTML)**:
+   公式Webサイト（`boatrace.jp`）が配信しているのは、人間がブラウザで見やすく装飾された **HTML ファイル** です。そのままではプログラムで直接計算できません。
+2. **`pyjpboatrace` などのパース（抽出）ライブラリの役割**:
+   Python ライブラリ `pyjpboatrace` などは、この生データ（HTML）を自動ダウンロードし、内部で HTML タグを解析（パース）して、必要な数値（勝率・モーター率・着順）だけを取り出した **CSV や JSON などの構造化データ** へと自動変換しています。
+
+##### 🚀 Racket 単体での HTML パース ＆ CSV 変換（`code/ch02-html-parser.rkt`）
+
+「誰が変換パイプラインをやるの？ Racket でできるの？」の答えは、**「Racket 1本だけで 100% 可能！」** です。
+
+付属のソースコード [/home/mevius/my-project/mypublish-racket-statistics/code/ch02-html-parser.rkt](file:///home/mevius/my-project/mypublish-racket-statistics/code/ch02-html-parser.rkt)（タスクコマンド: `mise run parse:html`）を実行すると、Racket 標準の正規表現が HTML から選手名・勝率・モーター率をすくい取り、構造化データ `data/parsed_races.csv` へと全自動変換する様子を体験できます！
+
+```racket
+#lang racket
+;; 【code/ch02-html-parser.rkt より抜粋】
+;; 正規表現で HTML タグの中身（艇番・選手名・勝率・モーター率・着順）を一括抽出
+(define boat-pattern #px"<span class='boat'>(.*?)</span>")
+(define racer-pattern #px"<span class='racer'>(.*?)</span>")
+(define win-pattern #px"<span class='win-rate'>(.*?)</span>")
+
+(define boats (map second (regexp-match* boat-pattern sample-html #:match-select (lambda (m) m))))
+(define racers (map second (regexp-match* racer-pattern sample-html #:match-select (lambda (m) m))))
+(define win-rates (map second (regexp-match* win-pattern sample-html #:match-select (lambda (m) m))))
+
+;; 構造化 CSV データ (data/parsed_races.csv) として自動書き出し！
+(define out-port (open-output-file "data/parsed_races.csv" #:exists 'replace))
+(displayln "boat_num,racer_name,win_rate,motor_rate,rank" out-port)
+
+(for ([b boats] [r racers] [w win-rates])
+  (displayln (format "~a,~a,~a" b r w) out-port))
+
+(close-output-port out-port)
+```
+
+ターミナルで **`mise run parse:html`** を叩くだけで、Racket による HTML パース処理が走ります！
+
+---
+
+#### 2.4 CSVファイル形式とボートレースデータの構造
+
+前処理された **CSV（Comma-Separated Values）** 形式のデータは、データをカンマ `,` で区切った単純なテキストファイルで、RacketFrames でそのまま読み込めます。
 
 本書で扱うボートレースデータ（`data/sample_races.csv`）の標準的な構造は以下のとおりです。
 
@@ -76,46 +122,16 @@ race_id,stadium,boat_num,racer_id,racer_name,win_rate,motor_rate,rank
 ...
 ```
 
-* **`race_id`**: レースを識別する固有ID（日付-場コード-レース番号）
-* **`stadium`**: レース場名（桐生、平和島、住之江など）
-* **`boat_num`**: 艇番（1〜6枠）
-* **`racer_id`**: レーサーの登録番号
-* **`racer_name`**: 選手名
-* **`win_rate`**: レーサーの全国勝率（0.00〜1.00）
-* **`motor_rate`**: モーターの2連対率（0.00〜1.00）
-* **`rank`**: 実際の確定着順（1〜6）
-
 次章では、この CSV データを **RacketFrames** を使って読み込み、データフレームとして自在に扱う方法を学びます。
 
 ---
 
-> ### 📖 【コラム】他言語の知見を活かす：Pythonライブラリ `pyjpboatrace` に学ぶデータ構造
+> ### 📖 【コラム】他言語の知見を活かす：Pythonライブラリ `pyjpboatrace` に学ぶデータ構造と公式取得
 > 
-> **大学図書館の司書より：知的なリサーチのヒント**
-> 
-> 先人の知恵が集積された「目録」や「ライブラリ」を調べることは、学術研究において最も基本的かつ有意義なステップです。
-> 私たちがこれから Racket で構築するプログラムの設計図を描くにあたり、Python の世界で広く利用されているオープンソースソフトウェア **`pyjpboatrace`**（[hmasdev/pyjpboatrace](https://github.com/hmasdev/pyjpboatrace)）のデータ構造は大いなる参考資料となります。
-> 
-> **1. URL構成（情報のありか）の分析**
-> ボートレースのオフィシャルサイト（`boatrace.jp`）からデータを取得するためには、情報がどのような「住所（URL）」に整理されているかを特定する必要があります。`pyjpboatrace` の内部実装を紐解くと、以下のようなパラメータ構成で各ページが配置されていることがわかります。
+> **1. URL構成（情報のありか）の分析と curl タスク**
+> ボートレースのオフィシャルサイト（`boatrace.jp`）からデータを取得するためには、情報がどのような「住所（URL）」に整理されているかを特定する必要があります。
 > * **番組表（出走表）**: `https://www.boatrace.jp/owpc/pc/race/racelist?rno=[レース番号]&jcd=[場コード]&hd=[日付]`
 > * **レース結果**: `https://www.boatrace.jp/owpc/pc/race/raceresult?rno=[レース番号]&jcd=[場コード]&hd=[日付]`
 > 
-> ここで、`rno` はレース番号（1〜12）、`jcd` は全国24箇所のボートレース場を識別する「場コード」（例: 桐生は `01`、平和島は `04` など）、`hd` は `YYYYMMDD` 形式の日付です。
-> この規則性を知ることで、Racket や `curl` を使って目的のデータに的確にアクセスするプログラムを記述できます。
-> 
 > **2. データの項目（スキーマ）の設計手本**
-> `pyjpboatrace` が HTML から抽出して JSON 形式に構造化している項目群は、私たちが RacketFrames の `DataFrame` に取り込むべき「列（Series）」の設計基準になります。
-> * レーサーの基本情報（登録番号、氏名、級別、年齢、体重）
-> * 成績情報（全国勝率、現地勝率、モーターの複勝率、ボートの複勝率）
-> 
-> 私たちはこれらの項目を RacketFrames の `ISeries`（登録番号など）や `NSeries`（勝率など）にマッピングし、分析を行います。
-> 
-> ⚖️ **データ収集におけるマナーと倫理（司書からの重要なお願い）**
-> 図書館の資料を乱暴に扱うと他の利用者の迷惑になるのと同様に、ウェブサイトへの自動アクセス（スクレイピング）を行う際もルールを守る必要があります。
-> * **アクセス頻度の制限**: プログラムからデータを取得する際は、オフィシャルサイトのサーバーに過度な負担をかけないよう、リクエストの間に適切な「待ち時間（sleep）」を必ず挿入しましょう。
-> * **ベッティング支援機能の除外**: `pyjpboatrace` には自動投票（Betting）の機能も実装されていますが、本書はデータ分析の学習を目的とした教育書であり、金銭的・技術的リスクを避けるため、自動操作については一切扱いません。
-
----
-
-* ※データ収集手法とマナーの整理：三角ロジックで整理予定
+> `pyjpboatrace` が HTML から抽出して構造化している項目群は、私たちが RacketFrames の `DataFrame` に取り込むべき「列（Series）」の設計基準になります。
