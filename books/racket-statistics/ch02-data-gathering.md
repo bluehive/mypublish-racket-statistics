@@ -3,8 +3,8 @@ title: "第2章　ボートレースのデータを集める（データ収集�
 ---
 
 > **この章のゴール**  
-> Webや外部ツール（`curl`）を活用してボートレースのデータ（CSV/テキスト）を手元に取得し、プログラムで扱える状態にする。付属のサンプルデータ（`code/sample_races.csv` / `data/sample_races.csv`）の構成を理解する。  
-> **使用技術**: Racket `net/url`, `curl`, `mise` タスクランナー  
+> Webや外部ツール（`curl`）を活用してボートレースのデータ（CSV/HTML）を手元に取得し、プログラムで扱える状態にする。付属のサンプルデータ（`code/sample_races.csv` / `data/sample_races.csv`）および公式Webデータ取得の仕組みを理解する。  
+> **使用技術**: Racket `net/url`, `curl`, `mise` タスクランナー, `pyjpboatrace` のURL設計  
 
 本章では、統計分析の土台となる「データ収集（スクレイピングとダウンロード）」の手法を学びます。Racket のネットワーク機能を使う方法と、より簡単で確実な外部ツール（`curl`）を `mise` タスクランナーで実行する方法の 2 通りを解説します。
 
@@ -30,37 +30,29 @@ Racket には、標準でネットワーク通信を行うためのライブラ�
 
 この方法を使うことで、プログラムの中から直接最新のデータを取得できます。
 
-#### 2.2 データのダウンロードが難しい場合の代替策（`curl` と `mise`）
+#### 2.2 データのダウンロードが難しい場合の代替策（`curl` と `mise` タスクランナー）
 
 Web サイトによっては、高度なアクセス制御（JavaScriptの実行要求など）が施されている場合があります。また、通信処理のコードを毎回書くのが大変な場合もあります。
 
 そこで、より簡単かつ確実にデータを一括ダウンロードするための代替策として、強力なコマンドラインツール **`curl`** と、タスクランナー **`mise`** を組み合わせた手法を活用します。
 
 ##### 1. コマンドラインでの `curl` の実行
-ターミナル（またはコマンドプロンプト）から、以下のコマンドを実行すると、リポジトリに配置されている公式サンプルデータ（`sample_races.csv`）を手元のフォルダに保存できます。
+ターミナルから以下のコマンドを実行すると、リポジトリに配置されている公式サンプルデータ（`sample_races.csv`）を手元のフォルダに保存できます。
 
 ```bash
 # サンプルデータのダウンロード例
-curl -s -o data/races.csv "https://raw.githubusercontent.com/bluehive/mypublish-racket-statistics/main/data/sample_races.csv"
+curl -s -o data/sample_races.csv "https://raw.githubusercontent.com/bluehive/mypublish-racket-statistics/main/data/sample_races.csv"
 ```
 
-##### 2. `mise.toml` によるダウンロードタスクの自動化
-プロジェクトのルートにある `mise.toml` に、以下のようなタスクを記述しておくと、複雑なコマンドを覚える必要がなくなります。
+##### 2. `mise.toml` による公式データ取得タスクの自動化
+後述の `pyjpboatrace` のURL構造を参考に、ボートレース公式Webサイトから本日の出走表データ（HTML）を `curl` で一瞬で自動取得するタスクが `mise.toml` に用意されています。
 
-```toml
-[tasks."data:download"]
-description = "ボートレースのサンプルデータ(CSV)を自動ダウンロードする"
-shell = "bash -c"
-run = '''
-set -euo pipefail
-mkdir -p data
-echo "Downloading race data..."
-curl -s -o data/races.csv "https://raw.githubusercontent.com/bluehive/mypublish-racket-statistics/main/data/sample_races.csv"
-echo "Download complete: data/races.csv"
-'''
+```bash
+# ボートレース公式Webサイトから出走表HTMLを自動取得する
+mise run data:download:official
 ```
 
-あとはターミナルで **`mise run data:download`** と打つだけで、いつでも最新の解析用データが手元にセットアップされます。付属のソースコードフォルダ（`code/`）内にも予備の `code/sample_races.csv` が保管されています。
+実行すると、`data/raw/racelist_sample.html` に最新の出走表データが保存されます。付属のソースコードフォルダ（`code/`）内にも予備のデータが保管されています。
 
 #### 2.3 CSVファイル形式とボートレースデータの構造
 
@@ -89,32 +81,28 @@ race_id,stadium,boat_num,racer_id,racer_name,win_rate,motor_rate,rank
 
 ---
 
-> ### 📖 【コラム】他言語の知見を活かす：Pythonライブラリ `pyjpboatrace` に学ぶデータ構造
+> ### 📖 【コラム】他言語の知見を活かす：Pythonライブラリ `pyjpboatrace` に学ぶデータ構造と公式取得
 > 
 > **大学図書館の司書より：知的なリサーチのヒント**
 > 
 > 先人の知恵が集積された「目録」や「ライブラリ」を調べることは、学術研究において最も基本的かつ有意義なステップです。
 > 私たちがこれから Racket で構築するプログラムの設計図を描くにあたり、Python の世界で広く利用されているオープンソースソフトウェア **`pyjpboatrace`**（[hmasdev/pyjpboatrace](https://github.com/hmasdev/pyjpboatrace)）のデータ構造は大いなる参考資料となります。
 > 
-> **1. URL構成（情報のありか）の分析**
+> **1. URL構成（情報のありか）の分析と curl タスク**
 > ボートレースのオフィシャルサイト（`boatrace.jp`）からデータを取得するためには、情報がどのような「住所（URL）」に整理されているかを特定する必要があります。`pyjpboatrace` の内部実装を紐解くと、以下のようなパラメータ構成で各ページが配置されていることがわかります。
 > * **番組表（出走表）**: `https://www.boatrace.jp/owpc/pc/race/racelist?rno=[レース番号]&jcd=[場コード]&hd=[日付]`
 > * **レース結果**: `https://www.boatrace.jp/owpc/pc/race/raceresult?rno=[レース番号]&jcd=[場コード]&hd=[日付]`
 > 
 > ここで、`rno` はレース番号（1〜12）、`jcd` は全国24箇所のボートレース場を識別する「場コード」（例: 桐生は `01`、平和島は `04` など）、`hd` は `YYYYMMDD` 形式の日付です。
-> この規則性を知ることで、Racket や `curl` を使って目的のデータに的確にアクセスするプログラムを記述できます。
+> 本書では、このURLパラメータ構造を応用し、`mise run data:download:official` というタスクで公式Webサイトの最新HTMLを一発取得できる環境を整えています。
 > 
 > **2. データの項目（スキーマ）の設計手本**
 > `pyjpboatrace` が HTML から抽出して JSON 形式に構造化している項目群は、私たちが RacketFrames の `DataFrame` に取り込むべき「列（Series）」の設計基準になります。
 > * レーサーの基本情報（登録番号、氏名、級別、年齢、体重）
 > * 成績情報（全国勝率、現地勝率、モーターの複勝率、ボートの複勝率）
 > 
-> 私たちはこれらの項目を RacketFrames の `ISeries`（登録番号など）や `NSeries`（勝率など）にマッピングし、分析を行います。
-> 
 > ⚖️ **データ収集におけるマナーと倫理（司書からの重要なお願い）**
-> 図書館の資料を乱暴に扱うと他の利用者の迷惑になるのと同様に、ウェブサイトへの自動アクセス（スクレイピング）を行う際もルールを守る必要があります。
-> * **アクセス頻度の制限**: プログラムからデータを取得する際は、オフィシャルサイトのサーバーに過度な負担をかけないよう、リクエストの間に適切な「待ち時間（sleep）」を必ず挿入しましょう。
-> * **ベッティング支援機能の除外**: `pyjpboatrace` には自動投票（Betting）の機能も実装されていますが、本書はデータ分析の学習を目的とした教育書であり、金銭的・技術的リスクを避けるため、自動操作については一切扱いません。
+> 図書館の資料を乱暴に扱うと他の利用者の迷惑になるのと同様に、ウェブサイトへの自動アクセスを行う際もルールを守る必要があります。アクセス頻度の制限（待ち時間）を守り、サーバーに負荷をかけない倫理的なデータ収集を行いましょう。
 
 ---
 
