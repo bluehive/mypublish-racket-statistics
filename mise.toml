@@ -1,71 +1,37 @@
-# mypublish-racket-statistics — mise tools & tasks
+[env]
+NODE_ENV = "development"
 
-[tools]
-node = "22"
-watchexec = "2"
+[tasks."data:download"]
+description = "ボートレースのサンプルデータ(CSV)を自動ダウンロードする"
+shell = "bash -c"
+run = "mkdir -p data && curl -s -o data/sample_races.csv https://raw.githubusercontent.com/bluehive/mypublish-racket-statistics/main/data/sample_races.csv"
 
-[tasks."zenn:preview"]
-description = "Zenn CLI プレビュー (localhost:8000)"
+[tasks."analysis:summary"]
+description = "第4章：枠番別の平均着順と勝率を一括集計する"
+shell = "bash -c"
+run = "racket code/ch04-analysis.rkt"
+
+[tasks."plot:scatter"]
+description = "第5章【最推しグラフ】：モーター2連対率 vs 確定着順の散布図を一発描画する"
+shell = "bash -c"
+run = "racket code/ch05-visualization.rkt"
+
+[tasks."model:predict"]
+description = "第6章【クライマックス】：予想スコアモデルの計算と的中率の答え合わせテストを一括実行する"
+shell = "bash -c"
+run = "racket code/ch06-prediction.rkt"
+
+[tasks."book:preview"]
+description = "Zenn CLI プレビューをローカルで起動する (http://localhost:8000)"
+shell = "bash -c"
 run = "npx zenn preview"
 
-[tasks."zenn:preview-port"]
-description = "Zenn プレビュー（ポート指定: PORT=3000 mise run zenn:preview-port）"
-run = "npx zenn preview --port ${PORT:-3000}"
+[tasks."test:racket"]
+description = "code/ 配下の Racket サンプルプログラムを一括テスト"
+shell = "bash -c"
+run = "racket code/ch01-basics.rkt && racket code/ch03-racketframes-basics.rkt"
 
 [tasks."zenn:deploy"]
-description = "Zenn.dev に電子書籍をアップロード (git push origin main)"
+description = "Zenn.dev へデプロイ (git push origin main)"
+shell = "bash -c"
 run = "git push origin main"
-
-[tasks."test:racket"]
-description = "code/ 配下の Racket コードを racket で実行（テスト）"
-sources = ["code/**/*.rkt", "code/*.rkt"]
-outputs = []
-shell = "bash -c"
-run = '''
-set -euo pipefail
-if ! command -v racket >/dev/null 2>&1; then
-  echo "racket not found. Install Racket first."
-  exit 1
-fi
-shopt -s nullglob
-found=0
-for f in code/*.rkt; do
-  [ -f "$f" ] || continue
-  found=1
-  echo "=== racket $f ==="
-  racket "$f"
-done
-if [ "$found" -eq 0 ]; then
-  echo "no .rkt files under code/"
-fi
-'''
-
-[tasks."ci:test"]
-description = "ローカル CI ゲート: テスト一発"
-depends = ["test:racket"]
-
-[tasks."watch:test"]
-description = "code/ 変更で test:racket を自動再実行"
-run = "mise watch test:racket --clear --on-busy-update=queue"
-
-[tasks."book:combine"]
-description = "books/ 章を manuscript/.../book.md に結合"
-run = "python3 scripts/racket-statistics/combine_drafts.py"
-
-[tasks."book:epub"]
-description = "横書き EPUB 生成 + verify（要 pandoc）"
-shell = "bash -c"
-run = '''
-set -euo pipefail
-python3 scripts/racket-statistics/combine_drafts.py
-python3 scripts/racket-statistics/build.py --format epub-horizontal --no-cover --verify
-'''
-
-[tasks."book:epub-vertical"]
-description = "縦書き EPUB 生成 + verify"
-shell = "bash -c"
-run = '''
-set -euo pipefail
-python3 scripts/racket-statistics/combine_drafts.py
-python3 scripts/racket-statistics/build.py --format epub-vertical --no-cover --verify
-'''
