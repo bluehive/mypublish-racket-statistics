@@ -85,7 +85,7 @@ Windows 10（1803以降）および Windows 11 の「コマンドプロンプト
 # 桐生 1R から 3R までの出走表を連続ダウンロードする安全な例
 for rno in 1 2 3; do
   echo "Downloading Race $rno..."
-  curl -s -o "data/raw/racelist_${rno}.html" "https://www.boatrace.jp/owpc/pc/race/racelist?rno=${rno}&jcd=01&hd=20260725"
+  curl -s --limit-rate 100k -o "data/raw/racelist_${rno}.html" "https://www.boatrace.jp/owpc/pc/race/racelist?rno=${rno}&jcd=01&hd=20260725"
   
   # ★重要: 相手のサーバー負荷を下げるため、必ず 1 秒以上のスリープ（待ち時間）を入れる！
   sleep 1
@@ -93,7 +93,7 @@ done
 ```
 
 ##### 2. `curl` の `--limit-rate` オプション（通信速度制限）
-一度に大量のデータ（画像や動画など）をダウンロードする場合、通信スピードを制限して相手サーバーの帯域を圧迫しないように設定します。
+単発・連続に関わらずデータ（画像や出走表など）をダウンロードする場合、通信スピードを制限して相手サーバーの帯域を圧迫しないように設定します。
 
 ```bash
 # 通信速度を最大 100KB/s に制限して安全にダウンロード
@@ -112,25 +112,28 @@ curl -s --rate 1/s -o "data/raw/racelist_sample.html" "https://www.boatrace.jp/o
 
 #### E.5 本書で使うボートレースデータダウンロード・スクリプトの徹底解説
 
-本書の実習で使用したボートレースデータダウンロードスクリプトのオプションの意味を復習しておきましょう。
+本書の実習で使用したボートレースデータダウンロードスクリプトのオプションの意味を復習しておきましょう。単発ダウンロードであっても、サーバー負荷軽減の **`--limit-rate 100k`（または `--rate 1/s`）と `sleep 1` 秒** を組み合わせるのが正しいデータマナーです。
 
-##### 1. 公式サンプルデータ (CSV) のダウンロード
+##### 1. 公式サンプルデータ (CSV) の安全なダウンロード
 ```bash
-curl -s -o data/sample_races.csv "https://raw.githubusercontent.com/bluehive/mypublish-racket-statistics/main/data/sample_races.csv"
+curl -s --limit-rate 100k -o data/sample_races.csv "https://raw.githubusercontent.com/bluehive/mypublish-racket-statistics/main/data/sample_races.csv"
 ```
 
-##### 2. ボートレース公式Webサイトの出走表 (HTML) ダウンロード
+##### 2. ボートレース公式Webサイトの出走表 (HTML) の安全なダウンロード
 ```bash
-curl -s -o data/raw/racelist_sample.html "https://www.boatrace.jp/owpc/pc/race/racelist?rno=1&jcd=01&hd=20260725"
+curl -s --limit-rate 100k -o data/raw/racelist_sample.html "https://www.boatrace.jp/owpc/pc/race/racelist?rno=1&jcd=01&hd=20260725"
+sleep 1  # サーバー保護のための1秒スリープ
 ```
 
 ##### 💡 コマンドのオプション解説
 * **`-s` (Silent / 静か)**:
-  ダウンロード中の進捗メーター（「10%... 50%...」などのプログレスバー）をターミナルに出力せず、静かにバックグラウンドで処理を行います。
+  ダウンロード中の進捗メーター（プログレスバー）をターミナルに出力せず、静かにバックグラウンドで処理を行います。
+* **`--limit-rate 100k` (通信速度制限)**:
+  通信スピードを最大 100KB/s に制限し、相手サーバーのネットワーク負荷を抑えます。
 * **`-o` (Output / 保存先の指定)**:
   取得したデータをどのフォルダ・ファイル名で保存するかを指定します（例: `data/sample_races.csv`）。
-* **`sleep` / `--limit-rate` / `--rate` (サーバー保護)**:
-  連続データ収集時にサーバーの負荷を下げ、倫理的なデータマナーを守るための必須オプション・コマンドです。
+* **`sleep 1` / `--rate` (アクセス間隔保護)**:
+  連続データ収集時・自動化タスク時にサーバーの負荷を下げ、倫理的なデータマナーを守るための必須コマンドです。
 * **`"URL"` (ダブルクォーテーションで囲む理由)**:
   URL に含まれる `?` や `&` などの記号（例: `?rno=1&jcd=01`）が、シェル（Bash）の特殊命令として誤作動するのを防ぐため、必ずダブルクォーテーション `""` で囲みます。
 
@@ -139,7 +142,7 @@ curl -s -o data/raw/racelist_sample.html "https://www.boatrace.jp/owpc/pc/race/r
 #### E.6 まとめ
 
 `curl` は、Web からデータを自動収集して分析のパイプラインに流し込むための最重要ツールです。
-必ず **「1秒以上のスリープ (`sleep 1`) を挟む」** というサーバーマナーを守り、安全かつ持続可能なデータ分析を楽しんでください！
+単発コマンドやスクリプトを問わず、**「速度制限 (`--limit-rate 100k`) と 1秒以上のスリープ (`sleep 1`) を組み合わせる」** というサーバーマナーを守り、安全かつ持続可能なデータ分析を楽しんでください！
 
 ---
 

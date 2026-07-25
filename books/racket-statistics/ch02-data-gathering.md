@@ -4,7 +4,7 @@ title: "第2章　ボートレースのデータを集める（データ収集�
 
 > **この章のゴール**  
 > Webや外部ツール（`curl`）を活用してボートレースのデータ（CSV/HTML）を手元に取得し、プログラムで扱える状態にする。付属のサンプルデータ（`code/sample_races.csv` / `data/sample_races.csv`）および公式Webデータ取得の仕組みを理解する。  
-> **使用技術**: Racket `net/url`, `curl`, `mise` タスクランナー, `pyjpboatrace` のURL設計  
+> **使用技術**: Racket `net/url`, `curl` (スリープ・通信速度制限付き), `mise` タスクランナー, `pyjpboatrace` のURL設計  
 
 本章では、統計分析の土台となる「データ収集（スクレイピングとダウンロード）」の手法を学びます。Racket のネットワーク機能を使う方法と、より簡単で確実な外部ツール（`curl`）を `mise` タスクランナーで実行する方法の 2 通りを解説します。
 
@@ -36,19 +36,19 @@ Web サイトによっては、高度なアクセス制御（JavaScriptの実行
 
 そこで、より簡単かつ確実にデータを一括ダウンロードするための代替策として、強力なコマンドラインツール **`curl`** と、タスクランナー **`mise`** を組み合わせた手法を活用します。
 
-##### 1. コマンドラインでの `curl` の実行
-ターミナルから以下のコマンドを実行すると、リポジトリに配置されている公式サンプルデータ（`sample_races.csv`）を手元のフォルダに保存できます。
+##### 1. コマンドラインでの `curl` の安全な実行
+ターミナルから以下のコマンドを実行すると、リポジトリに配置されている公式サンプルデータ（`sample_races.csv`）を、サーバー負荷を下げる **`--limit-rate 100k`（速度制限オプション）** 付きで手元のフォルダに安全に保存できます。
 
 ```bash
-# サンプルデータのダウンロード例
-curl -s -o data/sample_races.csv "https://raw.githubusercontent.com/bluehive/mypublish-racket-statistics/main/data/sample_races.csv"
+# サンプルデータの安全なダウンロード例 (通信速度制限 --limit-rate 100k 付き)
+curl -s --limit-rate 100k -o data/sample_races.csv "https://raw.githubusercontent.com/bluehive/mypublish-racket-statistics/main/data/sample_races.csv"
 ```
 
 ##### 2. `mise.toml` による公式データ取得タスクの自動化
-後述の `pyjpboatrace` のURL構造を参考に、ボートレース公式Webサイトから本日の出走表データ（HTML）を `curl` で一瞬で自動取得するタスクが `mise.toml` に用意されています。
+後述の `pyjpboatrace` のURL構造を参考に、ボートレース公式Webサイトから本日の出走表データ（HTML）を `curl` で安全に自動取得するタスクが `mise.toml` に用意されています。このタスクには **`--limit-rate 100k` オプションと `sleep 1` 秒のアクセス待ち時間** が組み込まれています。
 
 ```bash
-# ボートレース公式Webサイトから出走表HTMLを自動取得する
+# ボートレース公式Webサイトから出走表HTMLを安全に自動取得する (スリープ・速度制限付き)
 mise run data:download:official
 ```
 
@@ -94,7 +94,7 @@ race_id,stadium,boat_num,racer_id,racer_name,win_rate,motor_rate,rank
 > * **レース結果**: `https://www.boatrace.jp/owpc/pc/race/raceresult?rno=[レース番号]&jcd=[場コード]&hd=[日付]`
 > 
 > ここで、`rno` はレース番号（1〜12）、`jcd` は全国24箇所のボートレース場を識別する「場コード」（例: 桐生は `01`、平和島は `04` など）、`hd` は `YYYYMMDD` 形式の日付です。
-> 本書では、このURLパラメータ構造を応用し、`mise run data:download:official` というタスクで公式Webサイトの最新HTMLを一発取得できる環境を整えています。
+> 本書では、このURLパラメータ構造を応用し、`mise run data:download:official` というタスクで公式Webサイトの最新HTMLを **スリープ・速度制限付き** で一発取得できる環境を整えています。
 > 
 > **2. データの項目（スキーマ）の設計手本**
 > `pyjpboatrace` が HTML から抽出して JSON 形式に構造化している項目群は、私たちが RacketFrames の `DataFrame` に取り込むべき「列（Series）」の設計基準になります。
@@ -102,7 +102,7 @@ race_id,stadium,boat_num,racer_id,racer_name,win_rate,motor_rate,rank
 > * 成績情報（全国勝率、現地勝率、モーターの複勝率、ボートの複勝率）
 > 
 > ⚖️ **データ収集におけるマナーと倫理（司書からの重要なお願い）**
-> 図書館の資料を乱暴に扱うと他の利用者の迷惑になるのと同様に、ウェブサイトへの自動アクセスを行う際もルールを守る必要があります。アクセス頻度の制限（待ち時間）を守り、サーバーに負荷をかけない倫理的なデータ収集を行いましょう。
+> 図書館の資料を乱暴に扱うと他の利用者の迷惑になるのと同様に、ウェブサイトへの自動アクセスを行う際もルールを守る必要があります。アクセス頻度の制限（`sleep 1` や `--limit-rate`）を守り、サーバーに負荷をかけない倫理的なデータ収集を行いましょう。
 
 ---
 
