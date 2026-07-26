@@ -3,7 +3,7 @@ title: "付録E　curl を使ったデータ収集とコマンドガイド"
 ---
 
 > **この付録のゴール**  
-> コマンドラインでデータや Web ページを取得・保存する万能ツール **`curl`（カール）** の基本概念・各 OS でのインストール方法・サーバー負荷を下げるスリープ（ウェイト）オプション・生データ (HTML) と構造化データ (CSV) の変換関係・および本書で使うボートレースデータ取得スクリプトの全オプションの意味を丁寧に理解する。  
+> コマンドラインでデータや Web ページを取得・保存する万能ツール **`curl`（カール）** の基本概念・各 OS でのインストール方法・サーバー負荷を下げるスリープ（ウェイト）オプション・オープンデータ API (`turnmark/api`) や生データ (HTML) の取得手法・および本書で使うボートレースデータ取得スクリプトの全オプションの意味を丁寧に理解する。  
 
 ---
 
@@ -22,22 +22,23 @@ title: "付録E　curl を使ったデータ収集とコマンドガイド"
 
 ---
 
-#### E.2 💡 なぜ公式Webから取得できるのは HTML なのか？（`pyjpboatrace` 流パイプライン）
+#### E.2 💡 構造化データ API (`turnmark/api`) と公式 Web (HTML) の二大取得経路
 
-`curl` でボートレース公式Webサイト（`boatrace.jp`）からデータを取得すると、直接 CSV ではなく **HTML ファイル**（Webページの見た目用コード）がダウンロードされます。
+本書では、以下の 2 つのデータ取得経路で `curl` を活用しています。
 
-これは、公式Webサイトが「ブラウザで人間が画面を見るため」に作られているからです。Python のデータ収集ライブラリ `pyjpboatrace` などは、この HTML を `curl` 等で取得し、内部で HTML パース（タグの解析と数値の抜き出し）を行って CSV や JSON などの構造化データへと変換しています。
+1. **【本線】オープンデータ API (`turnmark/api`)**:
+   `https://turnmark.github.io/api/v1/today.json` や `https://turnmark.github.io/api/v1/YYYY/YYYYMMDD.json` から構造化 JSON データを直接 `curl` で高速取得・保存。
+2. **【参考・応用】公式 Web サイト (HTML 生データ)**:
+   `boatrace.jp` から人間用の HTML 出走表を `curl` 取得し、Racket 正規表現でパース（`pyjpboatrace` 流）。
 
 ```text
   【データサイエンスのパイプライン】
 
-   [公式Web (boatrace.jp)] ──curl──> 生データ (racelist.html)
-                                            │
-                                            ▼ (HTMLパース・数値抽出)
-   [RacketFrames で分析!] <── CSV保存 <── 構造化データ (sample_races.csv)
+   [オープンデータ API (turnmark/api)] ──curl──> 日付別JSON (20260726.json)
+                                                       │
+                                                       ▼ (require json) で自動スキャン
+   [RacketFrames で分析!] <── 累積CSV <── 構造化データ (parsed_races.csv)
 ```
-
-本書では、初心者・受講者がスムーズに RacketFrames で分析を楽しめるよう、このパイプラインで生成された **`sample_races.csv`** を実習用データとして使用しています！
 
 ---
 
@@ -58,9 +59,6 @@ macOS には最初から `curl` が組み込まれています。特別なイン
 
 ##### 3. Windows (Windows 10 / 11)
 Windows 10（1803以降）および Windows 11 の「コマンドプロンプト」または「PowerShell」には、標準で `curl.exe` が入っています。ターミナルを開いて `curl --version` と打つだけでそのまま利用できます。
-
-> **⚠️ 注意**  
-> `curl` のインストールは OS のシステム管理者権限（`sudo` や `apt`）を伴うため、本書の `mise.toml` タスクランナーには含めていません。お使いの OS のパッケージマネージャーを使って直接セットアップしてください。
 
 ---
 
@@ -87,82 +85,51 @@ Windows 10（1803以降）および Windows 11 の「コマンドプロンプト
 
 複数の Web ページや過去のレースデータを連続して取得する場合、**「相手のサーバーに負荷をかけないためのアクセススリープ（ウェイト時間）」を挟むことが倫理的・技術的に絶対必須のルール** です。
 
-スリープを挟まずに連続でリクエストを送ると、相手サーバーをダウンさせたり（DoS攻撃とみなされる）、IP アドレスがアクセス拒否される原因になります。
-
 ```text
   【スリープ（ウェイト）なし vs スリープありの比較】
 
    [危険な連続アクセス] ──> リクエスト ─> リクエスト ─> リクエスト ──> (サーバー障害・アクセス拒否！)
-                                                                         
+                                                                          
    [安全なアクセス]     ──> リクエスト ─> [ sleep 1秒 ] ─> リクエスト ──> (サーバーに優しく安全！😊)
 ```
 
 ##### 1. スクリプト内での `sleep 1`（または `sleep 2`）の挿入
-連続して複数のレース結果や出走表を取得する際は、必ず 1 回の `curl` ごとに `sleep 1`（1秒間の待ち時間）を挿入します。
+連続して `turnmark/api` や公式 Web からデータを取得する際は、必ず 1 回の `curl` ごとに `sleep 1`（1秒間の待ち時間）を挿入します。
 
 ```bash
-# 桐生 1R から 3R までの出走表を連続ダウンロードする安全な例
-for rno in 1 2 3; do
-  echo "Downloading Race $rno..."
-  curl -s --limit-rate 100k -o "data/raw/racelist_${rno}.html" "https://www.boatrace.jp/owpc/pc/race/racelist?rno=${rno}&jcd=01&hd=20260725"
-  
-  # ★重要: 相手のサーバー負荷を下げるため、必ず 1 秒以上のスリープ（待ち時間）を入れる！
+# 過去期間の JSON データを安全に一括ダウンロードする例
+for date in 20260701 20260702 20260703; do
+  echo "Downloading $date.json..."
+  curl -s --limit-rate 100k -o "data/raw/${date}.json" "https://turnmark.github.io/api/v1/2026/${date}.json"
   sleep 1
 done
-```
-
-##### 2. `curl` の `--limit-rate` オプション（通信速度制限）
-単発・連続に関わらずデータ（画像や出走表など）をダウンロードする場合、通信スピードを制限して相手サーバーの帯域を圧迫しないように設定します。
-
-```bash
-# 通信速度を最大 100KB/s に制限して安全にダウンロード
-curl -s --limit-rate 100k -o data/sample_races.csv "https://raw.githubusercontent.com/bluehive/mypublish-racket-statistics/main/data/sample_races.csv"
-```
-
-##### 3. `curl` の `--rate` オプション（リクエスト頻度制限 / curl 7.84.0以降）
-最新バージョンの `curl` では、`--rate 1/s`（1秒に1リクエストまで）というオプションがサポートされています。
-
-```bash
-# 1秒あたり最大 1 回のリクエストに制限して取得
-curl -s --rate 1/s -o "data/raw/racelist_sample.html" "https://www.boatrace.jp/owpc/pc/race/racelist?rno=1&jcd=01&hd=20260725"
 ```
 
 ---
 
 #### E.6 本書で使うボートレースデータダウンロード・スクリプトの徹底解説
 
-本書の実習で使用したボートレースデータダウンロードスクリプトのオプションの意味を復習しておきましょう。単発ダウンロードであっても、サーバー負荷軽減の **`--limit-rate 100k`（または `--rate 1/s`）と `sleep 1` 秒** を組み合わせるのが正しいデータマナーです。
-
-##### 1. 公式サンプルデータ (CSV) の安全なダウンロード
+##### 1. `turnmark/api` 日付指定 JSON の安全なダウンロード
 ```bash
-curl -s --limit-rate 100k -o data/sample_races.csv "https://raw.githubusercontent.com/bluehive/mypublish-racket-statistics/main/data/sample_races.csv"
+curl -s --limit-rate 100k -o data/raw/20260726.json "https://turnmark.github.io/api/v1/2026/20260726.json"
 ```
 
 ##### 2. ボートレース公式Webサイトの出走表 (HTML) の安全なダウンロード
 ```bash
 curl -s --limit-rate 100k -o data/raw/racelist_sample.html "https://www.boatrace.jp/owpc/pc/race/racelist?rno=1&jcd=01&hd=20260725"
-sleep 1  # サーバー保護のための1秒スリープ
+sleep 1
 ```
 
 ##### 💡 コマンドのオプション解説
-* **`-s` (Silent / 静か)**:
-  ダウンロード中の進捗メーター（プログレスバー）をターミナルに出力せず、静かにバックグラウンドで処理を行います。
-* **`--limit-rate 100k` (通信速度制限)**:
-  通信スピードを最大 100KB/s に制限し、相手サーバーのネットワーク負荷を抑えます。
-* **`-o` (Output / 保存先の指定)**:
-  取得したデータをどのフォルダ・ファイル名で保存するかを指定します（例: `data/sample_races.csv`）。
-* **`sleep 1` / `--rate` (アクセス間隔保護)**:
-  連続データ収集時・自動化タスク時にサーバーの負荷を下げ、倫理的なデータマナーを守るための必須コマンドです。
-* **`"URL"` (ダブルクォーテーションで囲む理由)**:
-  URL に含まれる `?` や `&` などの記号（例: `?rno=1&jcd=01`）が、シェル（Bash）の特殊命令として誤作動するのを防ぐため、必ずダブルクォーテーション `""` で囲みます。
+* **`-s` (Silent)**: 進捗バーを出さず静かにダウンロード。
+* **`--limit-rate 100k`**: 通信スピードを最大 100KB/s に制限。
+* **`-o` (Output)**: 保存先ファイルパスを指定。
+* **`sleep 1`**: 連続アクセス時のサーバー保護ウェイト。
 
 ---
 
-#### E.7 まとめ
+#### E.7 付録まとめ：三角ロジックによる整理
 
-`curl` は、Web からデータを自動収集して分析のパイプラインに流し込むための最重要ツールです。
-単発コマンドやスクリプトを問わず、**「速度制限 (`--limit-rate 100k`) と 1秒以上のスリープ (`sleep 1`) を組み合わせる」** というサーバーマナーを守り、安全かつ持続可能なデータ分析を楽しんでください！
-
----
-
-* ※データ収集ツールとコマンド操作の整理：三角ロジックで整理予定
+* **【主張 (Claim)】**: `curl` コマンドに速度制限とスリープを付与することで、`turnmark/api` 等から安全・持続可能にレースデータを自動収集できる。
+* **【事実・データ (Fact)】**: `--limit-rate 100k` オプション、`-o` による出力指定、および `sleep 1` を組み込んだ shell スクリプト（`mise.toml`）。
+* **【論拠・理由付け (Reasoning)】**: 通信帯域の抑圧とサーバーアクセス間隔の確保により、配信サーバーへの負荷を回避しつつ自動化パイプラインを安定運用できるため。
