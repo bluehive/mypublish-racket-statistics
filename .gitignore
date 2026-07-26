@@ -21,10 +21,12 @@ tools/pandoc.tar.gz
 
 # Build artifacts (keep directory structure)
 *.epub
+!output/racket-statistics/*.epub
 !output/racket-statistics/.gitkeep
 *.docx
 output/*
 !output/racket-statistics/
+!output/racket-statistics/*.epub
 !output/racket-statistics/.gitkeep
 !output/racket-statistics/README.md
 
