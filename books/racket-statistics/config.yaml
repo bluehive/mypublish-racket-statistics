@@ -15,5 +15,6 @@ chapters:
   - appendix-b-glossary
   - appendix-c-debugging
   - appendix-d-automation
+  - appendix-e-curl.md
 
 toc_depth: 2
