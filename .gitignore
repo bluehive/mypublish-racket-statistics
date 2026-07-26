@@ -1,7 +1,8 @@
-# OS / Editor
+# OS / Editor / CLI
 .DS_Store
 .idea/
 .vscode/
+.gemini/
 *~
 
 # Python

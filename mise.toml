@@ -9,6 +9,7 @@
 #   5. mise run parse:json           : data/raw/*.json の全データをスキャンし、集約 CSV を自動生成
 #   6. mise run test:racket          : code/ 配下の Racket サンプルプログラムを一括自動テスト
 #   7. mise run book:preview         : Zenn CLI ローカルプレビューサーバーを起動
+#   8. mise run build-epub           : Markdown 原稿から EPUB 電子書籍を全自動ビルド
 # ==============================================================================
 
 [env]
@@ -201,7 +202,7 @@ shell = "bash -c"
 run = "racket code/ch06-prediction.rkt"
 
 # ------------------------------------------------------------------------------
-# 4. ローカルプレビュー & テストタスク群 (Preview & Test Tasks)
+# 4. ローカルプレビュー・テスト & 電子書籍ビルドタスク群
 # ------------------------------------------------------------------------------
 
 # 4.1 Zenn CLI プレビュー起動
@@ -218,3 +219,23 @@ run = "npx zenn preview"
 description = "code/配下の Racket サンプルプログラムを一括テスト"
 shell = "bash -c"
 run = "racket code/ch01-basics.rkt && racket code/ch02-json-parser.rkt && racket code/ch02-html-parser.rkt && racket code/ch03-racketframes-basics.rkt && racket code/ch04-analysis.rkt && racket code/ch05-visualization.rkt && racket code/ch06-prediction.rkt"
+
+# 4.3 EPUB 電子書籍ビルドタスク (横書き)
+# 概要: books/ 配下の全 12 章原稿を統合し、Pandoc で横書き EPUB をビルド
+# 使い方: mise run build-epub (または mise run build:epub)
+[tasks."build-epub"]
+description = "books/ 配下の全 12 章原稿を統合し、Pandoc で横書き EPUB 電子書籍をビルドする"
+shell = "bash -c"
+run = "python3 scripts/racket-statistics/build.py --format epub-horizontal"
+
+[tasks."build:epub"]
+description = "books/ 配下の全 12 章原稿を統合し、Pandoc で横書き EPUB 電子書籍をビルドする"
+depends = ["build-epub"]
+
+# 4.4 EPUB 電子書籍ビルドタスク (縦書き)
+# 概要: books/ 配下の全 12 章原稿を統合し、Pandoc で縦書き EPUB をビルド
+# 使い方: mise run build:epub:vertical
+[tasks."build:epub:vertical"]
+description = "books/ 配下の全 12 章原稿を統合し、Pandoc で縦書き EPUB 電子書籍をビルドする"
+shell = "bash -c"
+run = "python3 scripts/racket-statistics/build.py --format epub-vertical"

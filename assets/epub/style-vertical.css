@@ -1,0 +1,23 @@
+/* EPUB Vertical Layout Styles */
+html, body {
+  writing-mode: vertical-rl;
+  -webkit-writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-feature-settings: "palt";
+  font-family: serif;
+  line-height: 1.8;
+  margin: 1em;
+  padding: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: serif;
+  text-align: left;
+  margin-right: 1.5em;
+  margin-left: 0.5em;
+}
+
+.tcy {
+  -webkit-text-combine: horizontal;
+  text-combine-upright: all;
+}
