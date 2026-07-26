@@ -336,12 +336,15 @@ CSV に含まれる **`date` 列（例: `2026-07-26`）** は、単なるレー�
 
 ---
 
-> ### 📖 【コラム】他言語の知見を活かす：Pythonライブラリ `pyjpboatrace` に学ぶデータ構造と公式取得
+> ### 📖 【コラム】オープンデータ API `turnmark/api` に学ぶ構造化 JSON スキーマとデータのあり方
 > 
-> **1. URL構成（情報のありか）の分析と curl タスク**
-> ボートレースのオフィシャルサイト（`boatrace.jp`）からデータを取得するためには、情報がどのような「住所（URL）」に整理されているかを特定する必要があります。
-> * **番組表（出走表）**: `https://www.boatrace.jp/owpc/pc/race/racelist?rno=[レース番号]&jcd=[場コード]&hd=[日付]`
-> * **レース結果**: `https://www.boatrace.jp/owpc/pc/race/raceresult?rno=[レース番号]&jcd=[場コード]&hd=[日付]`
+> **1. URL構成（API エンドポイントの階層構造）の分析**
+> オープンデータ API リポジトリ **[turnmark/api](https://github.com/turnmark/api)** では、ボートレースの公式データが洗練された URL 階層構造で公開・配信されています。
+> * **本日の最新データ**: `https://turnmark.github.io/api/v1/today.json`
+> * **日付別アーカイブデータ**: `https://turnmark.github.io/api/v1/YYYY/YYYYMMDD.json`
 > 
-> **2. データの項目（スキーマ）の設計手本**
-> `pyjpboatrace` が HTML から抽出して構造化している項目群は、私たちが RacketFrames の `DataFrame` に取り込むべき「列（Series）」の設計基準になります。
+> 年別ディレクトリ (`YYYY/`) と日付別ファイル名 (`YYYYMMDD.json`) に綺麗に整理されているため、`curl` やタスクランナーで過去の日付範囲を自動取得・累積保存するシステムをシンプルに構築できます。
+> 
+> **2. JSON スキーマ（構造化データ）の設計手本と Racket パース**
+> `turnmark/api` の JSON は、`programs -> stadiums -> races -> racers` という直感的な階層ハッシュ構造で統一されています。
+> 生 HTML のスクレイピングとは異なり、枠番（`entry_number`）、選手名（`name`）、登録番号（`number`）、級位（`rank_number_source`）、全国勝率（`national_win_rate`）、モーター2連対率（`motor_top_2_percent`）が型定義された数値・文字列として提供されており、Racket の `(require json)` を用いてそのまま RacketFrames の `DataFrame` 列（Series）へ美しく取り込める「理想的なデータ設計の手本」となっています。
