@@ -1,7 +1,7 @@
 # ==============================================================================
 # ボートレース統計入門 (mypublish-racket-statistics) タスクランナー設定 (mise.toml)
 #
-# 【データダウンロードタスク メニューガイド】
+# 【データダウンロードタスク メニューガイド (turnmark/api)】
 #   1. mise run data:download:today  : 本日分データのみ日付確認なしで一発自動取得
 #   2. mise run data:download:json   : 単日指定（本日または過去指定日）を対話確認して取得
 #   3. mise run data:download:range  : 過去の期間（開始日〜終了日）を一括指定して連続取得
@@ -29,7 +29,7 @@ depends = ["data:download:today"]
 # 概要: ユーザーへの日付確認プロンプトを出さず、本日の全場レースデータ (YYYYMMDD.json) を一発で取得保存
 # 使い方: mise run data:download:today
 [tasks."data:download:today"]
-description = "【本線】日付確認なしで本日のボートレースデータ (YYYYMMDD.json) を自動ダウンロード保存"
+description = "【本線】日付確認なしで本日のボートレースデータ (YYYYMMDD.json) を turnmark/api から自動ダウンロード保存"
 shell = "bash -c"
 run = '''
 set -euo pipefail
@@ -37,13 +37,13 @@ TODAY=$(date +%Y%m%d)
 YEAR=$(date +%Y)
 mkdir -p data/raw
 
-echo "本日のボートレースデータ (${TODAY}) を自動ダウンロードしています..."
+echo "本日のボートレースデータ (${TODAY}) を turnmark/api から自動ダウンロードしています..."
 
-if curl -fs --limit-rate 100k -o "data/raw/${TODAY}.json" "https://boatraceopenapi.github.io/api/v1/${YEAR}/${TODAY}.json"; then
+if curl -fs --limit-rate 100k -o "data/raw/${TODAY}.json" "https://turnmark.github.io/api/v1/${YEAR}/${TODAY}.json"; then
   echo "ダウンロード完了: data/raw/${TODAY}.json"
 else
   echo "本日用リンク (today.json) から取得します..."
-  curl -s --limit-rate 100k -o "data/raw/${TODAY}.json" "https://boatraceopenapi.github.io/api/v1/today.json"
+  curl -s --limit-rate 100k -o "data/raw/${TODAY}.json" "https://turnmark.github.io/api/v1/today.json"
   echo "ダウンロード完了: data/raw/${TODAY}.json"
 fi
 '''
@@ -52,7 +52,7 @@ fi
 # 概要: ダウンロード前に日付確認プロンプトを表示し、本日または指定の過去日 (YYYYMMDD) データを保存
 # 使い方: mise run data:download:json  (環境変数指定: TARGET_DATE=20260501 mise run data:download:json)
 [tasks."data:download:json"]
-description = "【本線】日付を確認・入力（過去日指定可）し、boatraceopenapi からレースデータ (YYYYMMDD.json) を取得保存"
+description = "【本線】日付を確認・入力（過去日指定可）し、turnmark/api からレースデータ (YYYYMMDD.json) を取得保存"
 shell = "bash -c"
 run = '''
 set -euo pipefail
@@ -68,13 +68,13 @@ fi
 YEAR="${TARGET_DATE:0:4}"
 mkdir -p data/raw
 
-echo "ボートレースデータ (対象日: ${TARGET_DATE}) をダウンロードしています..."
+echo "ボートレースデータ (対象日: ${TARGET_DATE}) を turnmark/api からダウンロードしています..."
 
-if curl -fs --limit-rate 100k -o "data/raw/${TARGET_DATE}.json" "https://boatraceopenapi.github.io/api/v1/${YEAR}/${TARGET_DATE}.json"; then
+if curl -fs --limit-rate 100k -o "data/raw/${TARGET_DATE}.json" "https://turnmark.github.io/api/v1/${YEAR}/${TARGET_DATE}.json"; then
   echo "ダウンロード完了: data/raw/${TARGET_DATE}.json"
 else
   echo "指定日付 (${TARGET_DATE}.json) の専用ファイルが見つからないため、today.json を取得します..."
-  curl -s --limit-rate 100k -o "data/raw/${TARGET_DATE}.json" "https://boatraceopenapi.github.io/api/v1/today.json"
+  curl -s --limit-rate 100k -o "data/raw/${TARGET_DATE}.json" "https://turnmark.github.io/api/v1/today.json"
   echo "ダウンロード完了: data/raw/${TARGET_DATE}.json"
 fi
 '''
@@ -83,7 +83,7 @@ fi
 # 概要: 開始日 (START_DATE) と終了日 (END_DATE) を対話入力し、指定期間内の過去データを一括蓄積取得
 # 使い方: mise run data:download:range (環境変数指定: START_DATE=20260701 END_DATE=20260705 mise run data:download:range)
 [tasks."data:download:range"]
-description = "【本線・期間指定】開始日と終了日 (YYYYMMDD) を指定して過去の複数日レースデータを一括ダウンロード・保存"
+description = "【本線・期間指定】開始日と終了日 (YYYYMMDD) を指定して過去の複数日レースデータを turnmark/api から一括ダウンロード・保存"
 shell = "bash -c"
 run = '''
 set -euo pipefail
@@ -110,7 +110,7 @@ CURRENT_SEC=$(date -d "$START_DATE" +%s)
 END_SEC=$(date -d "$END_DATE" +%s)
 
 echo "=========================================================="
-echo " 期間指定ダウンロード開始: ${START_DATE} 〜 ${END_DATE}"
+echo " 期間指定ダウンロード開始 (turnmark/api): ${START_DATE} 〜 ${END_DATE}"
 echo "=========================================================="
 
 while [ "$CURRENT_SEC" -le "$END_SEC" ]; do
@@ -118,7 +118,7 @@ while [ "$CURRENT_SEC" -le "$END_SEC" ]; do
   YEAR="${CURR_DATE:0:4}"
   
   echo -n "[${CURR_DATE}] 取得中... "
-  if curl -fs --limit-rate 100k -o "data/raw/${CURR_DATE}.json" "https://boatraceopenapi.github.io/api/v1/${YEAR}/${CURR_DATE}.json"; then
+  if curl -fs --limit-rate 100k -o "data/raw/${CURR_DATE}.json" "https://turnmark.github.io/api/v1/${YEAR}/${CURR_DATE}.json"; then
     echo "成功 -> data/raw/${CURR_DATE}.json"
   else
     echo "該当なし/スキップ"

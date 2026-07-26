@@ -24,7 +24,7 @@ racket code/ch01-basics.rkt
   * **役割**: Racket 基本文法、`define`、`cond`、リスト・ハッシュ構造の動作サンプル
 * **[ch02-json-parser.rkt](https://github.com/bluehive/mypublish-racket-statistics/blob/main/code/ch02-json-parser.rkt)**
   * **章**: 第2章【本線】
-  * **役割**: `boatraceopenapi` 構造化 JSON (`data/raw/*.json`) を `(require json)` で全自動スキャンし累積 CSV を生成
+  * **役割**: `turnmark/api` 構造化 JSON (`data/raw/*.json`) を `(require json)` で全自動スキャンし累積 CSV を生成
 * **[ch02-html-parser.rkt](https://github.com/bluehive/mypublish-racket-statistics/blob/main/code/ch02-html-parser.rkt)**
   * **章**: 第2章【参考・応用】
   * **役割**: 公式 Web サイトの HTML 生データを Racket の正規表現でパースし構造化 CSV へ変換

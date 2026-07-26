@@ -3,18 +3,18 @@ title: "第2章　ボートレースのデータを集める（データ収集�
 ---
 
 > **この章のゴール**  
-> Webや外部ツール（`curl`）およびオープンAPI（`boatraceopenapi`）を活用してボートレースのデータ（JSON/HTML）を手元に取得し、プログラムで扱える構造化CSVへと変換する。  
-> **【本線】**: `boatraceopenapi` から用途に合わせたタスクランナーメニュー（`today`, `json`, `range`）で日付別 JSON (`data/raw/YYYYMMDD.json`) を取得・蓄積保存し、Racket 標準の `(require json)` で全自動スキャン＆蓄積パース（`code/ch02-json-parser.rkt`）。  
+> Webや外部ツール（`curl`）およびオープンAPI（`turnmark/api`）を活用してボートレースのデータ（JSON/HTML）を手元に取得し、プログラムで扱える構造化CSVへと変換する。  
+> **【本線】**: `turnmark/api` から用途に合わせたタスクランナーメニュー（`today`, `json`, `range`）で日付別 JSON (`data/raw/YYYYMMDD.json`) を取得・蓄積保存し、Racket 標準の `(require json)` で全自動スキャン＆蓄積パース（`code/ch02-json-parser.rkt`）。  
 > **【参考・応用】**: 公式Webサイト（HTML生データ）の `curl` 取得と正規表現パース（`code/ch02-html-parser.rkt`）。  
 > **使用技術**: Racket `net/url`, `json`, `curl`, `mise` タスクランナー (`mise run data:download:today`, `mise run parse:json`, `mise run parse:html`)
 
-本章では、統計分析の土台となる「データ収集」の手法を学びます。現在ではボートレースのデータをオープンデータとして JSON 形式で配信する **`boatraceopenapi/api`** が存在するため、本章では **「用途に応じたダウンロードタスクで JSON データを手元に蓄積保存し、Racket で一括パースする手法」を本線** として解説します。
+本章では、統計分析の土台となる「データ収集」の手法を学びます。現在ではボートレースのデータをオープンデータとして JSON 形式で配信する **`turnmark/api`** が存在するため、本章では **「用途に応じたダウンロードタスクで JSON データを手元に蓄積保存し、Racket で一括パースする手法」を本線** として解説します。
 
 また、従来手法や他言語ライブラリ（`pyjpboatrace` 等）でよく行われている **「公式Webサイトから HTML 生データをダウンロードしてパースする手法」** も発展学習として併せて解説します。
 
 > [!NOTE]
 > **⚠️ 【第1章に続き再確認】自然環境要素（天候・風向・風速・波高など）の扱いについて**  
-> 第1章でも触れた通り、`boatraceopenapi` を含む標準的なデータ API には天候（晴れ・雨）、風向・風速、波高、水温などの【自然環境要素】は含まれておりません。そのため、**本書ではこれら天候や風などの自然環境要素はモデルに含めずスコープ外として扱い**、艇番・選手成績・モーター2連対率・確定着順といった **構造的データに特化して分析を進めます。**
+> 第1章でも触れた通り、`turnmark/api` を含む標準的なデータ API には天候（晴れ・雨）、風向・風速、波高、水温などの【自然環境要素】は含まれておりません。そのため、**本書ではこれら天候や風などの自然環境要素はモデルに含めずスコープ外として扱い**、艇番・選手成績・モーター2連対率・確定着順といった **構造的データに特化して分析を進めます。**
 
 ---
 
@@ -22,11 +22,11 @@ title: "第2章　ボートレースのデータを集める（データ収集�
 
 最もしっくりかつ確実なデータ収集法は、すでに構造化されて提供されている **JSON データ API** を活用することです。
 
-##### 1. `boatraceopenapi/api` と目的別タスクランナーメニュー
-[boatraceopenapi/api](https://github.com/boatraceopenapi/api) では、日付ごとのレースデータ（出走表・直前情報・確定着順）が以下の URL で配信されています。
+##### 1. `turnmark/api` と目的別タスクランナーメニュー
+[turnmark/api](https://github.com/turnmark/api) では、日付ごとのレースデータ（出走表・直前情報・確定着順）が以下の URL で配信されています。
 
-- **本日のデータ**: `https://boatraceopenapi.github.io/api/v1/today.json`
-- **日付指定データ（2026年01月01日以降）**: `https://boatraceopenapi.github.io/api/v1/YYYY/YYYYMMDD.json`
+- **本日のデータ**: `https://turnmark.github.io/api/v1/today.json`
+- **日付指定データ（2026年01月01日以降）**: `https://turnmark.github.io/api/v1/YYYY/YYYYMMDD.json`
 
 本書のリポジトリでは、用途や学習段階に応じて使い分けられる **4 種類のデータダウンロードメニュー（タスクランナー）** を用意しています。
 
@@ -147,9 +147,9 @@ mise run parse:html
 
 ```text
   【本線パイプライン (目的別ダウンロード ＆ 日付別 JSON 蓄積)】
-   [データダウンロードメニュー] ───> [boatraceopenapi API] ─── curl ───> 日付別JSON (data/raw/YYYYMMDD.json)
-                                                                             │
-                                                                             ▼ (require json) で全自動スキャン
+   [データダウンロードメニュー] ───> [turnmark/api] ─── curl ───> 日付別JSON (data/raw/YYYYMMDD.json)
+                                                                       │
+                                                                       ▼ (require json) で全自動スキャン
    RacketFrames で分析! <─── 累積CSV <─── 構造化データ (data/parsed_races.csv)
 
   【従来/応用パイプライン (HTML スクレイピング)】
