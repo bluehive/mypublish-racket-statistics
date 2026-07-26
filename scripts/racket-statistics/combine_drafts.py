@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Combine Zenn book chapters (books/) into manuscript book.md for EPUB.
 
-Canonical source: books/racket-game-of-life/*.md (Issue #27 Q2).
+Canonical source: books/racket-statistics/*.md
 """
 from __future__ import annotations
 
@@ -9,14 +9,12 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-BOOK_DIR = ROOT / "books/racket-game-of-life"
-OUT_BOOK = ROOT / "manuscript/racket-game-of-life/book.md"
-CONFIG = BOOK_DIR / "config.yaml"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from paths import AUTHOR, BOOK_SLUG, ROOT, SUBTITLE, TITLE  # noqa: E402
 
-TITLE = "Racketで学ぶ生命のゲーム"
-SUBTITLE = "関数型プログラミング入門とコンウェイのライフゲーム"
-AUTHOR = "陸機雑学ファクトリー / Grok 4.5"
+BOOK_DIR = ROOT / f"books/{BOOK_SLUG}"
+OUT_BOOK = ROOT / f"manuscript/{BOOK_SLUG}/book.md"
+CONFIG = BOOK_DIR / "config.yaml"
 
 
 def parse_chapters(config_text: str) -> list[str]:
@@ -76,7 +74,7 @@ def main() -> int:
         f"# {TITLE}\n\n",
         f"> **副題**: {SUBTITLE}  \n",
         f"> **著者**: {AUTHOR}  \n",
-        f"> **正本**: `books/racket-game-of-life/` (Zenn book)  \n\n",
+        f"> **正本**: `books/{BOOK_SLUG}/` (Zenn book)  \n\n",
         "---\n\n",
     ]
     for slug in chapters:

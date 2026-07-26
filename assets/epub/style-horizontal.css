@@ -1,0 +1,49 @@
+/* EPUB Horizontal Layout Styles */
+body {
+  font-family: sans-serif;
+  line-height: 1.6;
+  margin: 1em;
+  padding: 0;
+  writing-mode: horizontal-tb;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: sans-serif;
+  color: #1a2b4c;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+code, pre {
+  font-family: monospace;
+  background-color: #f4f6f8;
+  border-radius: 4px;
+}
+
+pre {
+  padding: 1em;
+  overflow-x: auto;
+}
+
+blockquote {
+  border-left: 4px solid #3182ce;
+  margin-left: 0;
+  padding-left: 1em;
+  color: #4a5568;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+th, td {
+  border: 1px solid #cbd5e0;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+th {
+  background-color: #ebf8ff;
+}
