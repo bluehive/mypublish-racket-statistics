@@ -38,17 +38,19 @@
 
 ;; 直近レース（日付 / R / 枠 / 選手名 / 着）
 (define (print-recent-races-table rows)
-  (printf "~a ~a ~a ~a ~a\n"
+  (printf "~a ~a ~a ~a ~a ~a\n"
           (pad "日付" 12)
           (pad "R" 4 #:right? #t)
           (pad "枠" 4 #:right? #t)
+          (pad "選手番号" 8 #:right? #t)
           (pad "選手名" 16)
           (pad "着" 4 #:right? #t))
   (for ([r rows])
-    (printf "~a ~a ~a ~a ~a\n"
+    (printf "~a ~a ~a ~a ~a ~a\n"
             (pad (hash-ref r 'race_date "") 12)
             (pad (hash-ref r 'race_num "") 4 #:right? #t)
             (pad (hash-ref r 'boat_num "") 4 #:right? #t)
+            (pad (hash-ref r 'racer_id (hash-ref r 'racer_number "")) 8 #:right? #t)
             (pad (hash-ref r 'racer_name "") 16)
             (pad (hash-ref r 'place "") 4 #:right? #t))))
 

@@ -455,6 +455,8 @@
              (new-ISeries (map (λ (r) (hash-ref r 'race_num)) recent-rows)))
        (cons 'boat_num
              (new-ISeries (map (λ (r) (hash-ref r 'boat_num)) recent-rows)))
+       (cons 'racer_id
+             (new-ISeries (map (λ (r) (hash-ref r 'racer_id)) recent-rows)))
        (cons 'racer_name
              (new-GenSeries (list->vector (map (λ (r) (hash-ref r 'racer_name)) recent-rows))))
        (cons 'place
