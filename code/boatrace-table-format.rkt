@@ -65,13 +65,14 @@
   (when (> (length rows) limit)
     (printf "… 他 ~a 行\n" (- (length rows) limit))))
 
-;; 全国月次など勝率 Top N
-(define (print-winrate-top-table ranked-all n)
+;; 勝率 Top N（会場・全国月次共通）
+(define (print-winrate-top-table ranked-all n #:caption [caption #f])
   (define show-n (min n (length ranked-all)))
   (define ranked (take ranked-all show-n))
-  (printf "\n--- 勝率 Top~a（出走10以上 / 候補~a人） ---\n"
-          show-n
-          (length ranked-all))
+  (printf "\n--- ~a ---\n"
+          (or caption
+              (format "勝率 Top~a（出走10以上 / 候補~a人）"
+                      show-n (length ranked-all))))
   (printf "~a ~a ~a ~a ~a ~a\n"
           (pad "選手番号" 8)
           (pad "氏名" 16)
