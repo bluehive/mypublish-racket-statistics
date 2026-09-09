@@ -281,6 +281,32 @@
         (length finalized-race-keys)
         (length recent-keys))
 
+;; 端末幅を意識した固定桁（ASCII=1・それ以外=2）— data-frame-head のズレ回避
+(define (disp-width s)
+  (for/sum ([c (in-string (~a s))])
+    (if (<= (char->integer c) #x7f) 1 2)))
+
+(define (pad s width #:right? [right? #f])
+  (define str (~a s))
+  (define padn (max 0 (- width (disp-width str))))
+  (define spaces (make-string padn #\space))
+  (if right? (string-append spaces str) (string-append str spaces)))
+
+(define (print-recent-table rows)
+  (printf "~a ~a ~a ~a ~a\n"
+          (pad "日付" 12)
+          (pad "R" 4 #:right? #t)
+          (pad "枠" 4 #:right? #t)
+          (pad "選手名" 16)
+          (pad "着" 4 #:right? #t))
+  (for ([r rows])
+    (printf "~a ~a ~a ~a ~a\n"
+            (pad (hash-ref r 'race_date) 12)
+            (pad (hash-ref r 'race_num) 4 #:right? #t)
+            (pad (hash-ref r 'boat_num) 4 #:right? #t)
+            (pad (hash-ref r 'racer_name) 16)
+            (pad (hash-ref r 'place) 4 #:right? #t))))
+
 (cond
   [(null? recent-rows)
    (printf "（結果確定レースがありません）\n")]
@@ -298,8 +324,8 @@
              (new-GenSeries (list->vector (map (λ (r) (hash-ref r 'racer_name)) recent-rows))))
        (cons 'place
              (new-ISeries (map (λ (r) (hash-ref r 'place)) recent-rows))))))
-   (show-data-frame-description (data-frame-description recent-df))
-   (data-frame-head recent-df)])
+   (printf "DataFrame 行数: ~a\n" (data-frame-row-count recent-df))
+   (print-recent-table recent-rows)])
 
 (define out-csv (path->string (build-path data-root (format "data/parsed_~a_races.csv" venue-key))))
 (make-directory* (path-only out-csv))
