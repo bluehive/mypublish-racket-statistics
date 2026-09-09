@@ -197,13 +197,15 @@ dir = "{{config_root}}"
 run = "racket code/venue-racketframes-display.rkt biwako"
 
 
-# 概要: data/national/by_month の全国月次集計をサマリ表示
+# 概要: data/national/by_month の全国月次集計をサマリ表示（勝率Topデフォルト20・対話で最大50）
 # 使い方: mise run show:national-month
-#         YEAR_MONTH=2026-08 mise run show:national-month
+#         racket code/national-month-summary.rkt 2026-08
+#         racket code/national-month-summary.rkt 2026-08 -n 30
+#         TOP_N=30 mise run show:national-month
 [tasks."show:national-month"]
-description = "全国月次集計 JSON のサマリ表示（code/national-month-summary.rkt）"
+description = "全国月次集計サマリ（勝率Top20、TTYなら1-50に変更可）"
 dir = "{{config_root}}"
-run = "racket code/national-month-summary.rkt"
+run = "racket code/national-month-summary.rkt ${YEAR_MONTH:-}"
 
 
 # 2.2 【参考・応用】Racket による HTML パース
