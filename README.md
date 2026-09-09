@@ -127,6 +127,20 @@ Racket（通常言語）とデータフレームライブラリ **「RacketFrame
 ### 取得に使ったツール
 - データ収集・整形・リポジトリへの保存作業は **Grok Bot** を利用して実施しました。
 
+### 津半年分の整形表示（RacketFrames 風）
+同梱の `data/raw/tsu/` を、本書と同じ **RacketFrames 互換データフレーム API**（`df-summary` / `df-show` / 枠番別勝率 / 直近Nレース）で整形して端末表示します。
+
+```bash
+mise run show:tsu
+# または
+racket code/tsu-racketframes-display.rkt
+```
+
+- スクリプト: `code/tsu-racketframes-display.rkt`
+- 出力: 端末表示に加え `data/parsed_tsu_races.csv` と `output/tsu-racketframes-report.txt`
+- 収集・整形スクリプト作成は **Grok Bot** を利用
+
+
 ---
 
 ## 🛠️ 開発と検証
@@ -144,6 +158,7 @@ npm install
 * **無確認本日データ取得**: `mise run data:download:today`
 * **対話指定単日データ取得**: `mise run data:download:json`
 * **対話指定過去期間一括蓄積**: `mise run data:download:range`
+* **津半年分の整形表示（RacketFrames風）**: `mise run show:tsu`
 * **JSONパース&CSV全自動生成**: `mise run parse:json`
 * **モーター相関散布図表示**: `mise run plot:scatter`
 * **予想AI的中率答え合わせテスト**: `mise run model:predict`

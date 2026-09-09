@@ -168,6 +168,14 @@ description = "【本線】第2章：data/raw/*.json の全ファイルを自動
 shell = "bash -c"
 run = "racket code/ch02-json-parser.rkt"
 
+# 概要: data/raw/tsu の半年分 JSON を RacketFrames 風データフレームに整形して端末表示し、CSV/レポートも出力
+# 使い方: mise run show:tsu
+[tasks."show:tsu"]
+description = "津レース半年分 JSON を RacketFrames 風に整形表示（code/tsu-racketframes-display.rkt）"
+dir = "{{config_root}}"
+run = "racket code/tsu-racketframes-display.rkt"
+
+
 # 2.2 【参考・応用】Racket による HTML パース
 # 概要: 正規表現を用いて HTML 生データから必要な列をすくい取り CSV を生成
 # 使い方: mise run parse:html

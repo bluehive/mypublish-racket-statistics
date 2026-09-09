@@ -40,3 +40,6 @@ data/parsed_races.csv
 notes/private/
 drafts/_scratch/
 *.local.md
+
+# Generated Tsu reshape output
+data/parsed_tsu_races.csv
