@@ -101,6 +101,34 @@ Racket（通常言語）とデータフレームライブラリ **「RacketFrame
 
 ---
 
+## 📦 同梱データセット（津・半年分）
+
+リポジトリの `data/raw/tsu/` に、ボートレース場 **津（stadium_number = 9）** のレース結果 JSON を同梱しています。
+
+| 項目 | 内容 |
+| --- | --- |
+| パス | `data/raw/tsu/YYYY-MM-DD.json`（開催日ごと） / `data/raw/tsu/_summary.json` |
+| 期間 | 2026-03-09 〜 2026-09-09（暦日約半年） |
+| 規模 | 開催日 111 日 / レース約 1,332（エラー 0） |
+| 中身の例 | 日付・会場・レース番号・着順・選手番号/氏名・進入・ST・気象・払戻し など |
+
+### どこから取得したか
+- **取得元**: 非公式の公開 JSON API「[Boatrace Open API](https://github.com/boatraceopenapi/results)」の `results/v3`
+- **エンドポイント例**: `https://boatraceopenapi.github.io/results/v3/{YYYY}/{YYYYMMDD}.json`（1日1ファイル・全国24場入り）
+- **公式との関係**: BOATRACE 公式サイトとは無関係のコミュニティ公開データです。欠損や差異があり得るため、厳密な公式値が必要な場合は [BOAT RACE オフィシャル](https://www.boatrace.jp/) を確認してください。
+
+### どうやって取得したか
+1. 日次の全国結果 JSON を取得（サーバー負荷に配慮し **リクエスト間隔 3 秒**）
+2. `stadium_number == 9`（津）のレースだけを抽出
+3. 開催のあった日だけ `data/raw/tsu/YYYY-MM-DD.json` として保存し、件数サマリを `_summary.json` に記録
+
+※ 公式 HTML のスクレイピングは、このパイロット取得では使っていません（公開 JSON で充足したため）。
+
+### 取得に使ったツール
+- データ収集・整形・リポジトリへの保存作業は **Grok Bot** を利用して実施しました。
+
+---
+
 ## 🛠️ 開発と検証
 本書のサンプルコードおよびZenn/EPUBプレビュー環境は、タスクランナー `mise` を用いてローカル検証が可能です。
 
