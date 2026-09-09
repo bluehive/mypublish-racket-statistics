@@ -168,6 +168,44 @@ description = "【本線】第2章：data/raw/*.json の全ファイルを自動
 shell = "bash -c"
 run = "racket code/ch02-json-parser.rkt"
 
+# 概要: data/raw/tsu の日次 JSON（最大約3年）を公式 RacketFrames で整形表示
+# 使い方: mise run show:tsu
+[tasks."show:tsu"]
+description = "津レース日次 JSON（最大約3年）を公式 RacketFrames で整形表示"
+dir = "{{config_root}}"
+run = "racket code/venue-racketframes-display.rkt tsu"
+
+# 概要: data/raw/gamagori の日次 JSON（最大約3年）を公式 RacketFrames で整形表示
+# 使い方: mise run show:gamagori
+[tasks."show:gamagori"]
+description = "蒲郡レース日次 JSON（最大約3年）を公式 RacketFrames で整形表示"
+dir = "{{config_root}}"
+run = "racket code/venue-racketframes-display.rkt gamagori"
+
+# 概要: data/raw/tokoname の日次 JSON（最大約3年）を公式 RacketFrames で整形表示
+# 使い方: mise run show:tokoname
+[tasks."show:tokoname"]
+description = "常滑レース日次 JSON（最大約3年）を公式 RacketFrames で整形表示"
+dir = "{{config_root}}"
+run = "racket code/venue-racketframes-display.rkt tokoname"
+
+# 概要: data/raw/biwako の日次 JSON（最大約3年）を公式 RacketFrames で整形表示
+# 使い方: mise run show:biwako
+[tasks."show:biwako"]
+description = "びわこレース日次 JSON（最大約3年）を公式 RacketFrames で整形表示"
+dir = "{{config_root}}"
+run = "racket code/venue-racketframes-display.rkt biwako"
+
+
+# 概要: data/national/by_month の全国月次集計をサマリ表示
+# 使い方: mise run show:national-month
+#         YEAR_MONTH=2026-08 mise run show:national-month
+[tasks."show:national-month"]
+description = "全国月次集計 JSON のサマリ表示（code/national-month-summary.rkt）"
+dir = "{{config_root}}"
+run = "racket code/national-month-summary.rkt"
+
+
 # 2.2 【参考・応用】Racket による HTML パース
 # 概要: 正規表現を用いて HTML 生データから必要な列をすくい取り CSV を生成
 # 使い方: mise run parse:html

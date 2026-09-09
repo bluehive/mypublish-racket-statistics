@@ -101,6 +101,57 @@ Racket（通常言語）とデータフレームライブラリ **「RacketFrame
 
 ---
 
+## 📦 レース結果 JSON データセット（最大約3年対応）
+
+コードは次のレイアウトの日次／月次 JSON を想定しています（会場日次のスキーマは共通）。
+
+| パス | 内容 |
+| --- | --- |
+| `data/raw/tsu/YYYY-MM-DD.json` | 津（stadium 9）日次 |
+| `data/raw/gamagori/YYYY-MM-DD.json` | 蒲郡（stadium 7）日次 |
+| `data/national/by_month/YYYY-MM.json` | 全国・月次サマリ |
+| `data/national/by_racer_monthly/YYYY-MM.json` | 全国・選手別月次（出走/1着/連対率など） |
+| `data/summaries/*_3y.json` | 収集サマリ（任意） |
+
+### 同梱状況（このブランチ）
+- 現状 git 追跡しているのは **津のパイロット分**（`data/raw/tsu/`、おおよそ 2026-03-09〜2026-09-08・約半年）です。
+- 収集済みの約3年分（2023-09-09〜2026-09-08、津579日 / 蒲郡607日 / 全国月次37ヶ月）は、必要に応じて外部から同じパスへ配置してください。
+- 環境変数 `BOATRACE_DATA_ROOT` でデータルートを切り替えできます（未設定時はリポジトリ直下）。
+
+### どこから取得したか
+- **取得元**: 非公式の公開 JSON API「[Boatrace Open API](https://github.com/boatraceopenapi/results)」の `results/v3`
+- **エンドポイント例**: `https://boatraceopenapi.github.io/results/v3/{YYYY}/{YYYYMMDD}.json`（1日1ファイル・全国24場入り）
+- **公式との関係**: BOATRACE 公式サイトとは無関係のコミュニティ公開データです。欠損や差異があり得るため、厳密な公式値が必要な場合は [BOAT RACE オフィシャル](https://www.boatrace.jp/) を確認してください。
+
+### どうやって取得したか
+1. 日次の全国結果 JSON を取得（負荷配慮のためリクエスト間隔は運用側で調整）
+2. 同じ生データから津（9）・蒲郡（7）・常滑（8）・びわこ（11）をフィルタし、全国月次／選手月次へ振り分け
+3. 開催のあった日だけ `data/raw/<venue>/YYYY-MM-DD.json` として保存
+
+※ 全国 raw の一括コミットは容量が大きいため、デフォルトでは gitignore 対象です。
+
+### 整形表示（公式 RacketFrames）
+事前に `raco pkg install --user --auto RacketFrames` が必要です。
+
+```bash
+mise run show:tsu
+mise run show:gamagori
+mise run show:tokoname
+mise run show:biwako
+mise run show:national-month
+# または
+racket code/venue-racketframes-display.rkt tsu
+racket code/venue-racketframes-display.rkt gamagori
+racket code/venue-racketframes-display.rkt tokoname
+racket code/venue-racketframes-display.rkt biwako
+racket code/national-month-summary.rkt 2026-08
+```
+
+- 本体: `code/venue-racketframes-display.rkt`
+- 互換ラッパー: `code/tsu-racketframes-display.rkt` / `code/gamagori-racketframes-display.rkt` / `code/tokoname-racketframes-display.rkt` / `code/biwako-racketframes-display.rkt`
+- 出力例: `data/parsed_tsu_races.csv` / `data/parsed_tokoname_races.csv` / `output/biwako-racketframes-report.txt`
+
+
 ## 🛠️ 開発と検証
 本書のサンプルコードおよびZenn/EPUBプレビュー環境は、タスクランナー `mise` を用いてローカル検証が可能です。
 
@@ -116,6 +167,11 @@ npm install
 * **無確認本日データ取得**: `mise run data:download:today`
 * **対話指定単日データ取得**: `mise run data:download:json`
 * **対話指定過去期間一括蓄積**: `mise run data:download:range`
+* **津日次 JSON の整形表示（最大約3年）**: `mise run show:tsu`
+* **蒲郡日次 JSON の整形表示（最大約3年）**: `mise run show:gamagori`
+* **常滑日次 JSON の整形表示（最大約3年）**: `mise run show:tokoname`
+* **びわこ日次 JSON の整形表示（最大約3年）**: `mise run show:biwako`
+* **全国月次集計サマリ**: `mise run show:national-month`
 * **JSONパース&CSV全自動生成**: `mise run parse:json`
 * **モーター相関散布図表示**: `mise run plot:scatter`
 * **予想AI的中率答え合わせテスト**: `mise run model:predict`
