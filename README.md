@@ -147,7 +147,9 @@ racket code/venue-racketframes-display.rkt biwako
 racket code/national-month-summary.rkt 2026-08
 ```
 
-- 本体: `code/venue-racketframes-display.rkt`
+- 本体: `code/venue-racketframes-display.rkt`（津・蒲郡・常滑・びわこ共通）
+- 表表示共通モジュール: `code/boatrace-table-format.rkt`（固定桁パディング・直近レース表・先頭プレビュー・勝率 Top）
+- 全国月次: `code/national-month-summary.rkt`（上記モジュールを利用）
 - 互換ラッパー: `code/tsu-racketframes-display.rkt` / `code/gamagori-racketframes-display.rkt` / `code/tokoname-racketframes-display.rkt` / `code/biwako-racketframes-display.rkt`
 - 出力例: `data/parsed_tsu_races.csv` / `data/parsed_tokoname_races.csv` / `output/biwako-racketframes-report.txt`
 

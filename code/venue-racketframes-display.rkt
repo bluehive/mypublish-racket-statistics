@@ -21,7 +21,8 @@
          racket/file
          racket/path
          racket/format
-         racket/cmdline)
+         racket/cmdline
+         "boatrace-table-format.rkt")
 
 (define venue-presets
   (hash "tsu" (hash 'label "津" 'dir "data/raw/tsu" 'stadium 9 'default-venue "tsu")
@@ -204,8 +205,8 @@
 (printf "行数(data-frame-row-count): ~a\n" (data-frame-row-count df))
 (printf "列数(data-frame-column-count): ~a\n" (data-frame-column-count df))
 
-(printf "\n--- 先頭行 (data-frame-head) ---\n")
-(data-frame-head df)
+(printf "\n--- 先頭行（主要列・固定桁） ---\n")
+(print-race-rows-preview sorted-rows #:limit 12)
 
 (define race-keys
   (remove-duplicates
@@ -281,32 +282,6 @@
         (length finalized-race-keys)
         (length recent-keys))
 
-;; 端末幅を意識した固定桁（ASCII=1・それ以外=2）— data-frame-head のズレ回避
-(define (disp-width s)
-  (for/sum ([c (in-string (~a s))])
-    (if (<= (char->integer c) #x7f) 1 2)))
-
-(define (pad s width #:right? [right? #f])
-  (define str (~a s))
-  (define padn (max 0 (- width (disp-width str))))
-  (define spaces (make-string padn #\space))
-  (if right? (string-append spaces str) (string-append str spaces)))
-
-(define (print-recent-table rows)
-  (printf "~a ~a ~a ~a ~a\n"
-          (pad "日付" 12)
-          (pad "R" 4 #:right? #t)
-          (pad "枠" 4 #:right? #t)
-          (pad "選手名" 16)
-          (pad "着" 4 #:right? #t))
-  (for ([r rows])
-    (printf "~a ~a ~a ~a ~a\n"
-            (pad (hash-ref r 'race_date) 12)
-            (pad (hash-ref r 'race_num) 4 #:right? #t)
-            (pad (hash-ref r 'boat_num) 4 #:right? #t)
-            (pad (hash-ref r 'racer_name) 16)
-            (pad (hash-ref r 'place) 4 #:right? #t))))
-
 (cond
   [(null? recent-rows)
    (printf "（結果確定レースがありません）\n")]
@@ -325,7 +300,7 @@
        (cons 'place
              (new-ISeries (map (λ (r) (hash-ref r 'place)) recent-rows))))))
    (printf "DataFrame 行数: ~a\n" (data-frame-row-count recent-df))
-   (print-recent-table recent-rows)])
+   (print-recent-races-table recent-rows)])
 
 (define out-csv (path->string (build-path data-root (format "data/parsed_~a_races.csv" venue-key))))
 (make-directory* (path-only out-csv))
