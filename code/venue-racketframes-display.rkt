@@ -241,35 +241,65 @@
           (first row) (second row) (third row)
           (real->decimal-string (* 100.0 (fourth row)) 1)))
 
-(define race-group-keys
-  (remove-duplicates
-   (map (λ (r) (format "~a-~a" (hash-ref r 'race_date) (hash-ref r 'race_num)))
-        sorted-rows)))
+;; 結果確定レース: そのレースの全艇に氏名があり、着順が1以上
+(define (race-key r)
+  (format "~a-~a" (hash-ref r 'race_date) (hash-ref r 'race_num)))
+
+(define (race-results-finalized? race-rows)
+  (and (pair? race-rows)
+       (andmap (λ (r)
+                 (define name (hash-ref r 'racer_name ""))
+                 (define place (hash-ref r 'place 0))
+                 (and (string? name)
+                      (non-empty-string? name)
+                      (exact-integer? place)
+                      (>= place 1)))
+               race-rows)))
+
+(define rows-by-race (make-hash))
+(for ([r sorted-rows])
+  (hash-update! rows-by-race (race-key r) (λ (lst) (cons r lst)) '()))
+
+(define finalized-race-keys
+  (filter (λ (k) (race-results-finalized? (reverse (hash-ref rows-by-race k))))
+          (hash-keys rows-by-race)))
+
 (define recent-keys
-  (take (sort race-group-keys string>?) (min 3 (length race-group-keys))))
+  (take (sort finalized-race-keys string>?)
+        (min 3 (length finalized-race-keys))))
+
 (define recent-rows
-  (filter (λ (r)
-            (member (format "~a-~a" (hash-ref r 'race_date) (hash-ref r 'race_num))
-                    recent-keys))
-          sorted-rows))
+  (apply append
+         (for/list ([k recent-keys])
+           (sort (reverse (hash-ref rows-by-race k))
+                 (λ (a b) (< (hash-ref a 'boat_num) (hash-ref b 'boat_num)))))))
 
-(define recent-df
-  (new-data-frame
-   (list
-    (cons 'race_date
-          (new-GenSeries (list->vector (map (λ (r) (hash-ref r 'race_date)) recent-rows))))
-    (cons 'race_num
-          (new-ISeries (map (λ (r) (hash-ref r 'race_num)) recent-rows)))
-    (cons 'boat_num
-          (new-ISeries (map (λ (r) (hash-ref r 'boat_num)) recent-rows)))
-    (cons 'racer_name
-          (new-GenSeries (list->vector (map (λ (r) (hash-ref r 'racer_name)) recent-rows))))
-    (cons 'place
-          (new-ISeries (map (λ (r) (hash-ref r 'place)) recent-rows))))))
+(printf "\n--- 直近 3 レース（結果確定のみ） ---\n")
+(printf "結果未確定レースは除外（氏名空・着順0のプレースホルダ日など）\n")
+(printf "候補キー数: 全~a / 確定~a / 表示~a\n"
+        (length (hash-keys rows-by-race))
+        (length finalized-race-keys)
+        (length recent-keys))
 
-(printf "\n--- 直近 3 レース (別 DataFrame) ---\n")
-(show-data-frame-description (data-frame-description recent-df))
-(data-frame-head recent-df)
+(cond
+  [(null? recent-rows)
+   (printf "（結果確定レースがありません）\n")]
+  [else
+   (define recent-df
+     (new-data-frame
+      (list
+       (cons 'race_date
+             (new-GenSeries (list->vector (map (λ (r) (hash-ref r 'race_date)) recent-rows))))
+       (cons 'race_num
+             (new-ISeries (map (λ (r) (hash-ref r 'race_num)) recent-rows)))
+       (cons 'boat_num
+             (new-ISeries (map (λ (r) (hash-ref r 'boat_num)) recent-rows)))
+       (cons 'racer_name
+             (new-GenSeries (list->vector (map (λ (r) (hash-ref r 'racer_name)) recent-rows))))
+       (cons 'place
+             (new-ISeries (map (λ (r) (hash-ref r 'place)) recent-rows))))))
+   (show-data-frame-description (data-frame-description recent-df))
+   (data-frame-head recent-df)])
 
 (define out-csv (path->string (build-path data-root (format "data/parsed_~a_races.csv" venue-key))))
 (make-directory* (path-only out-csv))
