@@ -101,16 +101,22 @@ Racket（通常言語）とデータフレームライブラリ **「RacketFrame
 
 ---
 
-## 📦 同梱データセット（津・半年分）
+## 📦 レース結果 JSON データセット（最大約3年対応）
 
-リポジトリの `data/raw/tsu/` に、ボートレース場 **津（stadium_number = 9）** のレース結果 JSON を同梱しています。
+コードは次のレイアウトの日次／月次 JSON を想定しています（会場日次のスキーマは共通）。
 
-| 項目 | 内容 |
+| パス | 内容 |
 | --- | --- |
-| パス | `data/raw/tsu/YYYY-MM-DD.json`（開催日ごと） / `data/raw/tsu/_summary.json` |
-| 期間 | 2026-03-09 〜 2026-09-09（暦日約半年） |
-| 規模 | 開催日 111 日 / レース約 1,332（エラー 0） |
-| 中身の例 | 日付・会場・レース番号・着順・選手番号/氏名・進入・ST・気象・払戻し など |
+| `data/raw/tsu/YYYY-MM-DD.json` | 津（stadium 9）日次 |
+| `data/raw/gamagori/YYYY-MM-DD.json` | 蒲郡（stadium 7）日次 |
+| `data/national/by_month/YYYY-MM.json` | 全国・月次サマリ |
+| `data/national/by_racer_monthly/YYYY-MM.json` | 全国・選手別月次（出走/1着/連対率など） |
+| `data/summaries/*_3y.json` | 収集サマリ（任意） |
+
+### 同梱状況（このブランチ）
+- 現状 git 追跡しているのは **津のパイロット分**（`data/raw/tsu/`、おおよそ 2026-03-09〜2026-09-08・約半年）です。
+- 収集済みの約3年分（2023-09-09〜2026-09-08、津579日 / 蒲郡607日 / 全国月次37ヶ月）は、必要に応じて外部から同じパスへ配置してください。
+- 環境変数 `BOATRACE_DATA_ROOT` でデータルートを切り替えできます（未設定時はリポジトリ直下）。
 
 ### どこから取得したか
 - **取得元**: 非公式の公開 JSON API「[Boatrace Open API](https://github.com/boatraceopenapi/results)」の `results/v3`
@@ -118,30 +124,29 @@ Racket（通常言語）とデータフレームライブラリ **「RacketFrame
 - **公式との関係**: BOATRACE 公式サイトとは無関係のコミュニティ公開データです。欠損や差異があり得るため、厳密な公式値が必要な場合は [BOAT RACE オフィシャル](https://www.boatrace.jp/) を確認してください。
 
 ### どうやって取得したか
-1. 日次の全国結果 JSON を取得（サーバー負荷に配慮し **リクエスト間隔 3 秒**）
-2. `stadium_number == 9`（津）のレースだけを抽出
-3. 開催のあった日だけ `data/raw/tsu/YYYY-MM-DD.json` として保存し、件数サマリを `_summary.json` に記録
+1. 日次の全国結果 JSON を取得（負荷配慮のためリクエスト間隔は運用側で調整）
+2. 同じ生データから津（9）・蒲郡（7）をフィルタし、全国月次／選手月次へ振り分け
+3. 開催のあった日だけ `data/raw/<venue>/YYYY-MM-DD.json` として保存
 
-※ 公式 HTML のスクレイピングは、このパイロット取得では使っていません（公開 JSON で充足したため）。
+※ 全国 raw の一括コミットは容量が大きいため、デフォルトでは gitignore 対象です。
 
-### 取得に使ったツール
-- データ収集・整形・リポジトリへの保存作業は **Grok Bot** を利用して実施しました。
-
-### 津半年分の整形表示（RacketFrames 風）
-同梱の `data/raw/tsu/` を、本書と同じ **RacketFrames 互換データフレーム API**（`df-summary` / `df-show` / 枠番別勝率 / 直近Nレース）で整形して端末表示します。
+### 整形表示（公式 RacketFrames）
+事前に `raco pkg install --user --auto RacketFrames` が必要です。
 
 ```bash
 mise run show:tsu
+mise run show:gamagori
+mise run show:national-month
 # または
-racket code/tsu-racketframes-display.rkt
+racket code/venue-racketframes-display.rkt tsu
+racket code/venue-racketframes-display.rkt gamagori
+racket code/national-month-summary.rkt 2026-08
 ```
 
-- スクリプト: `code/tsu-racketframes-display.rkt`
-- 出力: 端末表示に加え `data/parsed_tsu_races.csv` と `output/tsu-racketframes-report.txt`
-- 収集・整形スクリプト作成は **Grok Bot** を利用
+- 本体: `code/venue-racketframes-display.rkt`
+- 互換ラッパー: `code/tsu-racketframes-display.rkt` / `code/gamagori-racketframes-display.rkt`
+- 出力例: `data/parsed_tsu_races.csv` / `output/tsu-racketframes-report.txt`
 
-
----
 
 ## 🛠️ 開発と検証
 本書のサンプルコードおよびZenn/EPUBプレビュー環境は、タスクランナー `mise` を用いてローカル検証が可能です。
@@ -158,7 +163,9 @@ npm install
 * **無確認本日データ取得**: `mise run data:download:today`
 * **対話指定単日データ取得**: `mise run data:download:json`
 * **対話指定過去期間一括蓄積**: `mise run data:download:range`
-* **津半年分の整形表示（RacketFrames風）**: `mise run show:tsu`
+* **津日次 JSON の整形表示（最大約3年）**: `mise run show:tsu`
+* **蒲郡日次 JSON の整形表示（最大約3年）**: `mise run show:gamagori`
+* **全国月次集計サマリ**: `mise run show:national-month`
 * **JSONパース&CSV全自動生成**: `mise run parse:json`
 * **モーター相関散布図表示**: `mise run plot:scatter`
 * **予想AI的中率答え合わせテスト**: `mise run model:predict`
