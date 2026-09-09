@@ -56,3 +56,6 @@ data/parsed_*_races.csv
 # National aggregates (large; keep local unless explicitly added)
 data/national/
 data/summaries/
+
+# 出走表（全国1日分・容量大）
+data/programs/

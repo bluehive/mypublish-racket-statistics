@@ -10,7 +10,8 @@
          fmt-rate
          print-recent-races-table
          print-race-rows-preview
-         print-winrate-top-table)
+         print-winrate-top-table
+         print-equipment-top-table)
 
 (require racket/format
          racket/list)
@@ -89,3 +90,35 @@
             (pad (fmt-rate (hash-ref r 'win_rate 0)) 8 #:right? #t)
             (pad (fmt-rate (hash-ref r 'top2_rate 0)) 8 #:right? #t)))
   show-n)
+
+;; ボート本体 / モーター番号の勝率 Top N
+;; ranked の各行: hash with number, starts, wins, win_rate, top2_rate
+(define (print-equipment-top-table ranked-all n
+                                   #:caption [caption #f]
+                                   #:id-label [id-label "番号"])
+  (define show-n (min n (length ranked-all)))
+  (define ranked (take ranked-all show-n))
+  (printf "\n--- ~a ---\n"
+          (or caption
+              (format "~a 勝率 Top~a（候補~a）"
+                      id-label show-n (length ranked-all))))
+  (cond
+    [(null? ranked)
+     (printf "（該当なし）\n")
+     show-n]
+    [else
+     (printf "~a ~a ~a ~a ~a\n"
+             (pad id-label 8 #:right? #t)
+             (pad "出走" 6 #:right? #t)
+             (pad "1着" 6 #:right? #t)
+             (pad "勝率" 8 #:right? #t)
+             (pad "連対率" 8 #:right? #t))
+     (for ([r ranked])
+       (printf "~a ~a ~a ~a ~a\n"
+               (pad (hash-ref r 'number "") 8 #:right? #t)
+               (pad (hash-ref r 'starts 0) 6 #:right? #t)
+               (pad (hash-ref r 'wins 0) 6 #:right? #t)
+               (pad (fmt-rate (hash-ref r 'win_rate 0)) 8 #:right? #t)
+               (pad (fmt-rate (hash-ref r 'top2_rate 0)) 8 #:right? #t)))
+     show-n]))
+

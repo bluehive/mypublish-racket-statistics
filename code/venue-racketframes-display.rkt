@@ -255,6 +255,115 @@
   #:caption (format "~a 勝率 Top~a（~a / 出走10以上 / 候補~a人）"
                     venue-label venue-top-n period-label (length venue-ranked))))
 
+;; ---------------------------------------------------------------------------
+;; ボート本体・モーター勝率 Top10
+;; 結果JSONには番号が無いため、出走表 programs/v3 を date+stadium+R+枠 で結合
+;; 期待パス: data/programs/YYYY-MM-DD.json（全国1日分）
+;; ---------------------------------------------------------------------------
+(define programs-dir
+  (path->string (build-path data-root "data/programs")))
+
+(define (program-assign-key date stadium race-num boat-num)
+  (format "~a|~a|~a|~a" date stadium race-num boat-num))
+
+(define (load-program-assignments dates stadium)
+  (define assign (make-hash))
+  (define loaded 0)
+  (define missing 0)
+  (for ([d dates])
+    (define path (build-path programs-dir (string-append d ".json")))
+    (cond
+      [(not (file-exists? path))
+       (set! missing (add1 missing))]
+      [else
+       (define data (call-with-input-file path read-json))
+       (define programs (clean (hash-ref data 'programs #f) '()))
+       (when (list? programs)
+         (set! loaded (add1 loaded))
+         (for ([p programs]
+               #:when (and (hash? p)
+                           (= (as-int (clean (hash-ref p 'stadium_number #f) -1) -1)
+                              stadium)))
+           (define race-num (as-int (clean (hash-ref p 'number #f) 0) 0))
+           (define day (as-string (clean (hash-ref p 'date #f) d)))
+           (define boats (clean (hash-ref p 'boats #f) '()))
+           (when (list? boats)
+             (for ([b boats] #:when (hash? b))
+               (define boat-num (as-int (clean (hash-ref b 'racer_boat_number #f) 0) 0))
+               (define hull (as-int (clean (hash-ref b 'racer_assigned_boat_number #f) 0) 0))
+               (define motor (as-int (clean (hash-ref b 'racer_assigned_motor_number #f) 0) 0))
+               (when (and (> boat-num 0) (or (> hull 0) (> motor 0)))
+                 (hash-set! assign
+                            (program-assign-key day stadium race-num boat-num)
+                            (hash 'hull hull 'motor motor)))))))]))
+  (values assign loaded missing))
+
+(define (equipment-winrate-rows rows assign field #:min-starts [min-starts 10])
+  (define by-num (make-hash))
+  (for ([r rows])
+    (define place (hash-ref r 'place 0))
+    (when (and (exact-integer? place) (>= place 1))
+      (define key (program-assign-key (hash-ref r 'race_date)
+                                      (hash-ref r 'stadium_num)
+                                      (hash-ref r 'race_num)
+                                      (hash-ref r 'boat_num)))
+      (define a (hash-ref assign key #f))
+      (when a
+        (define num (hash-ref a field 0))
+        (when (and (exact-integer? num) (> num 0))
+          (define cur (hash-ref by-num num #f))
+          (cond
+            [(not cur)
+             (hash-set! by-num num
+                        (hash 'number num
+                              'starts 1
+                              'wins (if (= place 1) 1 0)
+                              'top2 (if (<= place 2) 1 0)))]
+            [else
+             (hash-set! by-num num
+                        (hash-set* cur
+                                   'starts (add1 (hash-ref cur 'starts))
+                                   'wins (+ (hash-ref cur 'wins) (if (= place 1) 1 0))
+                                   'top2 (+ (hash-ref cur 'top2) (if (<= place 2) 1 0))))])))))
+  (define ranked
+    (for/list ([(num h) (in-hash by-num)]
+               #:when (>= (hash-ref h 'starts) min-starts))
+      (define starts (hash-ref h 'starts))
+      (hash-set* h
+                 'win_rate (exact->inexact (/ (hash-ref h 'wins) starts))
+                 'top2_rate (exact->inexact (/ (hash-ref h 'top2) starts)))))
+  (sort ranked (λ (a b) (> (hash-ref a 'win_rate) (hash-ref b 'win_rate)))))
+
+(define venue-day-keys
+  (remove-duplicates (map (λ (r) (hash-ref r 'race_date)) sorted-rows)))
+
+(define-values (program-assign programs-loaded programs-missing)
+  (load-program-assignments venue-day-keys default-stadium))
+
+(printf "\n出走表(programs)結合: 読込~a日 / 未取得~a日 / 割当キー~a\n"
+        programs-loaded programs-missing (hash-count program-assign))
+
+(define equip-top-n 10)
+(define hull-ranked (equipment-winrate-rows sorted-rows program-assign 'hull #:min-starts 10))
+(define motor-ranked (equipment-winrate-rows sorted-rows program-assign 'motor #:min-starts 10))
+
+(void
+ (print-equipment-top-table
+  hull-ranked equip-top-n
+  #:id-label "ボート"
+  #:caption (format "~a ボート本体 勝率 Top~a（~a / 出走10以上 / 候補~a / programs結合）"
+                    venue-label equip-top-n period-label (length hull-ranked))))
+
+(void
+ (print-equipment-top-table
+  motor-ranked equip-top-n
+  #:id-label "モーター"
+  #:caption (format "~a モーター 勝率 Top~a（~a / 出走10以上 / 候補~a / programs結合）"
+                    venue-label equip-top-n period-label (length motor-ranked))))
+
+(when (> programs-missing 0)
+  (printf "※ data/programs/YYYY-MM-DD.json が揃うほど集計が正確になります（Boatrace OpenAPI programs/v3）\n"))
+
 (define race-keys
   (remove-duplicates
    (for/list ([r sorted-rows])
