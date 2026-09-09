@@ -205,8 +205,55 @@
 (printf "行数(data-frame-row-count): ~a\n" (data-frame-row-count df))
 (printf "列数(data-frame-column-count): ~a\n" (data-frame-column-count df))
 
-(printf "\n--- 先頭行（主要列・固定桁） ---\n")
-(print-race-rows-preview sorted-rows #:limit 12)
+;; 会場データ期間の選手別勝率 Top20（出走10以上・結果確定行のみ）
+(define (racer-winrate-rows rows #:min-starts [min-starts 10])
+  (define by-id (make-hash))
+  (for ([r rows])
+    (define place (hash-ref r 'place 0))
+    (when (and (exact-integer? place) (>= place 1))
+      (define id (hash-ref r 'racer_id 0))
+      (define name (hash-ref r 'racer_name ""))
+      (define cur (hash-ref by-id id #f))
+      (cond
+        [(not cur)
+         (hash-set! by-id id
+                    (hash 'racer_number id
+                          'racer_name name
+                          'starts 1
+                          'wins (if (= place 1) 1 0)
+                          'top2 (if (<= place 2) 1 0)))]
+        [else
+         (hash-set! by-id id
+                    (hash-set*
+                     cur
+                     'racer_name (if (non-empty-string? name) name (hash-ref cur 'racer_name ""))
+                     'starts (add1 (hash-ref cur 'starts))
+                     'wins (+ (hash-ref cur 'wins) (if (= place 1) 1 0))
+                     'top2 (+ (hash-ref cur 'top2) (if (<= place 2) 1 0))))])))
+  (define ranked
+    (for/list ([(id h) (in-hash by-id)]
+               #:when (>= (hash-ref h 'starts) min-starts))
+      (define starts (hash-ref h 'starts))
+      (define wins (hash-ref h 'wins))
+      (define top2 (hash-ref h 'top2))
+      (hash-set* h
+                 'win_rate (exact->inexact (/ wins starts))
+                 'top2_rate (exact->inexact (/ top2 starts)))))
+  (sort ranked (λ (a b) (> (hash-ref a 'win_rate) (hash-ref b 'win_rate)))))
+
+(define venue-top-n 20)
+(define venue-ranked (racer-winrate-rows sorted-rows #:min-starts 10))
+(define period-label
+  (let ([days (remove-duplicates (map (λ (r) (hash-ref r 'race_date)) sorted-rows))])
+    (if (null? days)
+        "期間なし"
+        (let ([ds (sort days string<?)])
+          (format "~a〜~a" (first ds) (last ds))))))
+(void
+ (print-winrate-top-table
+  venue-ranked venue-top-n
+  #:caption (format "~a 勝率 Top~a（~a / 出走10以上 / 候補~a人）"
+                    venue-label venue-top-n period-label (length venue-ranked))))
 
 (define race-keys
   (remove-duplicates
