@@ -394,9 +394,9 @@
 (printf "枠\t出走\t1着\t勝率\n")
 (define boat-stats (win-rate-by-boat sorted-rows))
 (for ([row boat-stats])
-  (printf "~a\t~a\t~a\t~a%\n"
+  (printf "~a\t~a\t~a\t~a\n"
           (first row) (second row) (third row)
-          (real->decimal-string (* 100.0 (fourth row)) 1)))
+          (fmt-rate-pct (fourth row))))
 
 ;; 結果確定レース: そのレースの全艇に氏名があり、着順が1以上
 (define (race-key r)
@@ -483,8 +483,8 @@
       (fprintf out "期間: ~a 〜 ~a\n\n" (first days-sorted) (last days-sorted)))
     (fprintf out "枠番別勝率:\n")
     (for ([row boat-stats])
-      (fprintf out "  ~a号艇: 出走~a / 1着~a / ~a%\n"
+      (fprintf out "  ~a号艇: 出走~a / 1着~a / ~a\n"
                (first row) (second row) (third row)
-               (real->decimal-string (* 100.0 (fourth row)) 1)))))
+               (fmt-rate-pct (fourth row))))))
 (printf "6. レポート保存: ~a\n" report-path)
 (printf "=========================================\n")

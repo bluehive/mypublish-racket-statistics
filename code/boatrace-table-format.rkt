@@ -8,6 +8,7 @@
 (provide disp-width
          pad
          fmt-rate
+         fmt-rate-pct
          print-recent-races-table
          print-race-rows-preview
          print-winrate-top-table
@@ -26,8 +27,17 @@
   (define spaces (make-string padn #\space))
   (if right? (string-append spaces str) (string-append str spaces)))
 
+;; 勝率・連対率: 小数第2位まで（切り捨て）。例 0.8182 -> 0.81
 (define (fmt-rate x)
-  (real->decimal-string (exact->inexact (if (real? x) x 0)) 4))
+  (define v (exact->inexact (if (real? x) x 0)))
+  (define truncated (/ (truncate (* (max 0.0 v) 100.0)) 100.0))
+  (real->decimal-string truncated 2))
+
+;; 枠番別など百分率表示用（切り捨て第2位）。例 0.52812 -> 52.81%
+(define (fmt-rate-pct x)
+  (define v (* (exact->inexact (if (real? x) x 0)) 100.0))
+  (define truncated (/ (truncate (* (max 0.0 v) 100.0)) 100.0))
+  (string-append (real->decimal-string truncated 2) "%"))
 
 ;; 直近レース（日付 / R / 枠 / 選手名 / 着）
 (define (print-recent-races-table rows)
