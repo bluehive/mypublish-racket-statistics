@@ -272,11 +272,15 @@
 (define recent-rows
   (apply append
          (for/list ([k recent-keys])
-           (sort (reverse (hash-ref rows-by-race k))
-                 (λ (a b) (< (hash-ref a 'boat_num) (hash-ref b 'boat_num)))))))
+           (define top3
+             (filter (λ (r)
+                       (define pl (hash-ref r 'place 0))
+                       (and (exact-integer? pl) (<= 1 pl 3)))
+                     (reverse (hash-ref rows-by-race k))))
+           (sort top3 (λ (a b) (< (hash-ref a 'place) (hash-ref b 'place)))))))
 
-(printf "\n--- 直近 3 レース（結果確定のみ） ---\n")
-(printf "結果未確定レースは除外（氏名空・着順0のプレースホルダ日など）\n")
+(printf "\n--- 直近 3 レース（結果確定・各レース1〜3着） ---\n")
+(printf "結果未確定レースは除外。各レースは1着・2着・3着の3名のみ表示\n")
 (printf "候補キー数: 全~a / 確定~a / 表示~a\n"
         (length (hash-keys rows-by-race))
         (length finalized-race-keys)
