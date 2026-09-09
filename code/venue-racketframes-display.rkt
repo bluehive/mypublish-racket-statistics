@@ -2,14 +2,16 @@
 
 ;; =============================================================================
 ;; 会場別レース結果 JSON → 公式 RacketFrames で整形・表示
-;; 対応: data/raw/<venue>/YYYY-MM-DD.json（津・蒲郡など、最大約3年分）
+;; 対応: data/raw/<venue>/YYYY-MM-DD.json（津・蒲郡・常滑・びわこ、最大約3年分）
 ;; 依存: raco pkg install --user --auto RacketFrames
 ;;   require はコレクション名 racketframes（カタログ名 RacketFrames）
 ;; 実行例:
 ;;   racket code/venue-racketframes-display.rkt tsu
 ;;   racket code/venue-racketframes-display.rkt gamagori
+;;   racket code/venue-racketframes-display.rkt tokoname
+;;   racket code/venue-racketframes-display.rkt biwako
 ;;   BOATRACE_DATA_ROOT=/path/to/root racket code/venue-racketframes-display.rkt tsu
-;;   mise run show:tsu / mise run show:gamagori
+;;   mise run show:tsu / show:gamagori / show:tokoname / show:biwako
 ;; =============================================================================
 
 (require racketframes
@@ -23,7 +25,9 @@
 
 (define venue-presets
   (hash "tsu" (hash 'label "津" 'dir "data/raw/tsu" 'stadium 9 'default-venue "tsu")
-        "gamagori" (hash 'label "蒲郡" 'dir "data/raw/gamagori" 'stadium 7 'default-venue "gamagori")))
+        "gamagori" (hash 'label "蒲郡" 'dir "data/raw/gamagori" 'stadium 7 'default-venue "gamagori")
+        "tokoname" (hash 'label "常滑" 'dir "data/raw/tokoname" 'stadium 8 'default-venue "tokoname")
+        "biwako" (hash 'label "びわこ" 'dir "data/raw/biwako" 'stadium 11 'default-venue "biwako")))
 
 (define data-root
   (or (getenv "BOATRACE_DATA_ROOT") "."))

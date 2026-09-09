@@ -125,7 +125,7 @@ Racket（通常言語）とデータフレームライブラリ **「RacketFrame
 
 ### どうやって取得したか
 1. 日次の全国結果 JSON を取得（負荷配慮のためリクエスト間隔は運用側で調整）
-2. 同じ生データから津（9）・蒲郡（7）をフィルタし、全国月次／選手月次へ振り分け
+2. 同じ生データから津（9）・蒲郡（7）・常滑（8）・びわこ（11）をフィルタし、全国月次／選手月次へ振り分け
 3. 開催のあった日だけ `data/raw/<venue>/YYYY-MM-DD.json` として保存
 
 ※ 全国 raw の一括コミットは容量が大きいため、デフォルトでは gitignore 対象です。
@@ -136,16 +136,20 @@ Racket（通常言語）とデータフレームライブラリ **「RacketFrame
 ```bash
 mise run show:tsu
 mise run show:gamagori
+mise run show:tokoname
+mise run show:biwako
 mise run show:national-month
 # または
 racket code/venue-racketframes-display.rkt tsu
 racket code/venue-racketframes-display.rkt gamagori
+racket code/venue-racketframes-display.rkt tokoname
+racket code/venue-racketframes-display.rkt biwako
 racket code/national-month-summary.rkt 2026-08
 ```
 
 - 本体: `code/venue-racketframes-display.rkt`
-- 互換ラッパー: `code/tsu-racketframes-display.rkt` / `code/gamagori-racketframes-display.rkt`
-- 出力例: `data/parsed_tsu_races.csv` / `output/tsu-racketframes-report.txt`
+- 互換ラッパー: `code/tsu-racketframes-display.rkt` / `code/gamagori-racketframes-display.rkt` / `code/tokoname-racketframes-display.rkt` / `code/biwako-racketframes-display.rkt`
+- 出力例: `data/parsed_tsu_races.csv` / `data/parsed_tokoname_races.csv` / `output/biwako-racketframes-report.txt`
 
 
 ## 🛠️ 開発と検証
@@ -165,6 +169,8 @@ npm install
 * **対話指定過去期間一括蓄積**: `mise run data:download:range`
 * **津日次 JSON の整形表示（最大約3年）**: `mise run show:tsu`
 * **蒲郡日次 JSON の整形表示（最大約3年）**: `mise run show:gamagori`
+* **常滑日次 JSON の整形表示（最大約3年）**: `mise run show:tokoname`
+* **びわこ日次 JSON の整形表示（最大約3年）**: `mise run show:biwako`
 * **全国月次集計サマリ**: `mise run show:national-month`
 * **JSONパース&CSV全自動生成**: `mise run parse:json`
 * **モーター相関散布図表示**: `mise run plot:scatter`

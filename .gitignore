@@ -31,11 +31,15 @@ output/*
 !output/racket-statistics/README.md
 
 # Generated data files
-data/raw/
+data/raw/*
 !data/raw/tsu/
 !data/raw/tsu/**
 !data/raw/gamagori/
 !data/raw/gamagori/**
+!data/raw/tokoname/
+!data/raw/tokoname/**
+!data/raw/biwako/
+!data/raw/biwako/**
 data/parsed_races.csv
 
 # Local only
