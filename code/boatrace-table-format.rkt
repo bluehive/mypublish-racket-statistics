@@ -27,17 +27,14 @@
   (define spaces (make-string padn #\space))
   (if right? (string-append spaces str) (string-append str spaces)))
 
-;; 勝率・連対率: 小数第2位まで（切り捨て）。例 0.8182 -> 0.81
+;; 勝率・連対率: 百分率・小数第2位まで（切り捨て）。例 0.09129 -> 9.12%
 (define (fmt-rate x)
-  (define v (exact->inexact (if (real? x) x 0)))
-  (define truncated (/ (truncate (* (max 0.0 v) 100.0)) 100.0))
-  (real->decimal-string truncated 2))
-
-;; 枠番別など百分率表示用（切り捨て第2位）。例 0.52812 -> 52.81%
-(define (fmt-rate-pct x)
-  (define v (* (exact->inexact (if (real? x) x 0)) 100.0))
-  (define truncated (/ (truncate (* (max 0.0 v) 100.0)) 100.0))
+  (define pct (* (exact->inexact (if (real? x) x 0)) 100.0))
+  (define truncated (/ (truncate (* (max 0.0 pct) 100.0)) 100.0))
   (string-append (real->decimal-string truncated 2) "%"))
+
+;; 互換エイリアス（枠番別など）
+(define fmt-rate-pct fmt-rate)
 
 ;; 直近レース（日付 / R / 枠 / 選手名 / 着）
 (define (print-recent-races-table rows)
@@ -89,16 +86,16 @@
           (pad "氏名" 16)
           (pad "出走" 6 #:right? #t)
           (pad "1着" 6 #:right? #t)
-          (pad "勝率" 8 #:right? #t)
-          (pad "連対率" 8 #:right? #t))
+          (pad "勝率" 9 #:right? #t)
+          (pad "連対率" 9 #:right? #t))
   (for ([r ranked])
     (printf "~a ~a ~a ~a ~a ~a\n"
             (pad (hash-ref r 'racer_number "") 8)
             (pad (hash-ref r 'racer_name "") 16)
             (pad (hash-ref r 'starts 0) 6 #:right? #t)
             (pad (hash-ref r 'wins 0) 6 #:right? #t)
-            (pad (fmt-rate (hash-ref r 'win_rate 0)) 8 #:right? #t)
-            (pad (fmt-rate (hash-ref r 'top2_rate 0)) 8 #:right? #t)))
+            (pad (fmt-rate (hash-ref r 'win_rate 0)) 9 #:right? #t)
+            (pad (fmt-rate (hash-ref r 'top2_rate 0)) 9 #:right? #t)))
   show-n)
 
 ;; ボート本体 / モーター番号の勝率 Top N
@@ -121,14 +118,14 @@
              (pad id-label 8 #:right? #t)
              (pad "出走" 6 #:right? #t)
              (pad "1着" 6 #:right? #t)
-             (pad "勝率" 8 #:right? #t)
-             (pad "連対率" 8 #:right? #t))
+             (pad "勝率" 9 #:right? #t)
+             (pad "連対率" 9 #:right? #t))
      (for ([r ranked])
        (printf "~a ~a ~a ~a ~a\n"
                (pad (hash-ref r 'number "") 8 #:right? #t)
                (pad (hash-ref r 'starts 0) 6 #:right? #t)
                (pad (hash-ref r 'wins 0) 6 #:right? #t)
-               (pad (fmt-rate (hash-ref r 'win_rate 0)) 8 #:right? #t)
-               (pad (fmt-rate (hash-ref r 'top2_rate 0)) 8 #:right? #t)))
+               (pad (fmt-rate (hash-ref r 'win_rate 0)) 9 #:right? #t)
+               (pad (fmt-rate (hash-ref r 'top2_rate 0)) 9 #:right? #t)))
      show-n]))
 
