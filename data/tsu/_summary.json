@@ -1,0 +1,25 @@
+{
+  "venue": "tsu",
+  "stadium_number": 9,
+  "period": {
+    "start": "2026-03-09",
+    "end": "2026-09-09"
+  },
+  "mode_final": "open_api",
+  "days_calendar": 185,
+  "days_with_races": 111,
+  "days_skipped": 74,
+  "errors": 0,
+  "race_count": 1332,
+  "sample_days": [
+    "2026-03-24",
+    "2026-03-25",
+    "2026-03-26",
+    "...",
+    "2026-09-06",
+    "2026-09-07",
+    "2026-09-08"
+  ],
+  "output_dir": "/workspace/boatrace_data/by_venue/tsu",
+  "log": "/workspace/boatrace_data/logs/fetch_tsu_6m.log"
+}
