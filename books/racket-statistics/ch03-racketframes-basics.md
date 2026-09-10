@@ -234,7 +234,8 @@ racket code/ch03-racketframes-basics.rkt
 (define df (read-csv "data/parsed_races.csv"))
 
 ;; 2. 直近 100 レース (件数 N) をスライス切り出し
-(define df-recent-100 (df-take-recent-races df 100))
+(define recent-100-rows (df-take-recent-races df 100))
+(define df-recent-100 (list (first df) recent-100-rows))
 
 ;; 3. "racer_name", "win_rate", "rank" の3列だけを安全に抜き出す (df-project)
 (define df-clean (df-project df-recent-100 '("racer_name" "win_rate" "rank")))

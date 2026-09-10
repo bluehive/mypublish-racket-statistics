@@ -20,7 +20,7 @@ title: "第2章　ボートレースのデータを集める（データ収集�
 
 #### 2.1 【本線】オープンデータ API から日付指定・期間一括 JSON を取得・蓄積してパースする
 
-最もしっくりかつ確実なデータ収集法は、すでに構造化されて提供されている **JSON データ API** を活用することです。
+最もシンプルかつ確実なデータ収集法は、すでに構造化されて提供されている **JSON データ API** を活用することです。
 
 ##### 1. `turnmark/api` と目的別タスクランナーメニュー
 [turnmark/api](https://github.com/turnmark/api) では、日付ごとのレースデータ（出走表・直前情報・確定着順）が以下の URL で配信されています。
@@ -91,7 +91,7 @@ mise run data:download:range
 ##### 3. Racket による全 JSON ファイルの自動スキャン & 蓄積パース（`code/ch02-json-parser.rkt`）
 Racket の標準ライブラリ `(require json)` を使い、`data/raw/` ディレクトリ配下に蓄積されたすべての `*.json` ファイルを自動検出して順次パースし、単一の構造化 CSV (`data/parsed_races.csv`) へと集約結合します。
 
-付属ソースコード [code/ch02-json-parser.rkt](file:///home/mevius/my-project/mypublish-racket-statistics/code/ch02-json-parser.rkt) の主要ロジックは以下の通りです。
+付属ソースコード [code/ch02-json-parser.rkt](../../code/ch02-json-parser.rkt) の主要ロジックは以下の通りです。
 
 ```racket
 #lang racket
@@ -132,7 +132,7 @@ mise run data:download:official
 ##### 2. Racket 単体での HTML パース（`code/ch02-html-parser.rkt`）
 取得した HTML 生データから、正規表現（`regexp-match*`）を用いて艇番・選手名・勝率などをすくい取るパース処理も Racket 1本で実現可能です。
 
-付属ソースコード [code/ch02-html-parser.rkt](file:///home/mevius/my-project/mypublish-racket-statistics/code/ch02-html-parser.rkt) でその仕組みを体験できます。
+付属ソースコード [code/ch02-html-parser.rkt](../../code/ch02-html-parser.rkt) でその仕組みを体験できます。
 
 ```bash
 # 【参考】Racket による HTML パース処理の実行
@@ -153,7 +153,7 @@ mise run parse:html
    RacketFrames で分析! <─── 累積CSV <─── 構造化データ (data/parsed_races.csv)
 
   【従来/応用パイプライン (HTML スクレイピング)】
-   [ボートレース公式Web] ─── curl ───> 生HTML (racelist.html)
+   [ボートレース公式Web] ─── curl ───> 生HTML (racelist_sample.html)
                                               │
                                               ▼ 正規表現 / HTMLパース
    RacketFrames で分析! <─── CSV保存 <─── 構造化データ (data/parsed_races.csv)
@@ -269,7 +269,7 @@ CSV に含まれる **`date` 列（例: `2026-07-26`）** は、単なるレー�
 > [!TIP]
 > ### 📖 【中盛りコラム】自然環境（天候・風）を排除し、過去データを積み重ねる統計的・相関分析上の真の意義
 > 
-> API データに天候や風などの自然環境要素が含まれていないことは、一見するとデメリットに感じるかもしれません。しかし、**統計学やデータサイエンスの視点から見ると、これは「本質的な本気構造（相関関係）を取り出すための大きなアドバンテージ」** に変わります！
+> API データに天候や風などの自然環境要素が含まれていないことは、一見するとデメリットに感じるかもしれません。しかし、**統計学やデータサイエンスの視点から見ると、これは「本質的な構造（相関関係）を取り出すための大きなアドバンテージ」** に変わります！
 > 
 > #### 1. 天候や風は「確率的なホワイトノイズ (ランダム誤差 $\epsilon$)」である
 > 毎レースの突風や偶発的な雨・波の乱れは、平均するとプラスマイナスゼロに収束する **無作為なランダムノイズ（$\epsilon_i \sim \mathcal{N}(0, \sigma^2)$）** とみなすことができます。
