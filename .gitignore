@@ -40,6 +40,8 @@ data/raw/*
 !data/raw/tokoname/**
 !data/raw/biwako/
 !data/raw/biwako/**
+!data/raw/hamanako/
+!data/raw/hamanako/**
 data/parsed_races.csv
 
 # Local only

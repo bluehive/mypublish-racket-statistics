@@ -279,3 +279,10 @@ depends = ["build-epub"]
 description = "books/ 配下の全 12 章原稿を統合し、Pandoc で縦書き EPUB 電子書籍をビルドする"
 shell = "bash -c"
 run = "python3 scripts/racket-statistics/build.py --format epub-vertical"
+
+# 概要: data/raw/hamanako の日次 JSON（最大約3年）を公式 RacketFrames で整形表示
+# 使い方: mise run show:hamanako
+[tasks."show:hamanako"]
+description = "浜名湖レース日次 JSON（最大約3年）を公式 RacketFrames で整形表示"
+dir = "{{config_root}}"
+run = "racket code/venue-racketframes-display.rkt hamanako"

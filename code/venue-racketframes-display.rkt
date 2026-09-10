@@ -10,8 +10,9 @@
 ;;   racket code/venue-racketframes-display.rkt gamagori
 ;;   racket code/venue-racketframes-display.rkt tokoname
 ;;   racket code/venue-racketframes-display.rkt biwako
+;;   racket code/venue-racketframes-display.rkt hamanako
 ;;   BOATRACE_DATA_ROOT=/path/to/root racket code/venue-racketframes-display.rkt tsu
-;;   mise run show:tsu / show:gamagori / show:tokoname / show:biwako
+;;   mise run show:tsu / show:gamagori / show:tokoname / show:biwako / show:hamanako
 ;; =============================================================================
 
 (require racketframes
@@ -28,7 +29,8 @@
   (hash "tsu" (hash 'label "津" 'dir "data/raw/tsu" 'stadium 9 'default-venue "tsu")
         "gamagori" (hash 'label "蒲郡" 'dir "data/raw/gamagori" 'stadium 7 'default-venue "gamagori")
         "tokoname" (hash 'label "常滑" 'dir "data/raw/tokoname" 'stadium 8 'default-venue "tokoname")
-        "biwako" (hash 'label "びわこ" 'dir "data/raw/biwako" 'stadium 11 'default-venue "biwako")))
+        "biwako" (hash 'label "びわこ" 'dir "data/raw/biwako" 'stadium 11 'default-venue "biwako")
+        "hamanako" (hash 'label "浜名湖" 'dir "data/raw/hamanako" 'stadium 6 'default-venue "hamanako")))
 
 (define data-root
   (or (getenv "BOATRACE_DATA_ROOT") "."))

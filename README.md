@@ -138,12 +138,14 @@ mise run show:tsu
 mise run show:gamagori
 mise run show:tokoname
 mise run show:biwako
+mise run show:hamanako
 mise run show:national-month
 # または
 racket code/venue-racketframes-display.rkt tsu
 racket code/venue-racketframes-display.rkt gamagori
 racket code/venue-racketframes-display.rkt tokoname
 racket code/venue-racketframes-display.rkt biwako
+racket code/venue-racketframes-display.rkt hamanako
 racket code/national-month-summary.rkt 2026-08
 ```
 
@@ -151,7 +153,7 @@ racket code/national-month-summary.rkt 2026-08
 - 表表示共通モジュール: `code/boatrace-table-format.rkt`（固定桁パディング・直近レース表・選手/ボート/モーター勝率 Top）
 - 出走表（本体・モーター番号）: `data/programs/YYYY-MM-DD.json`（Boatrace OpenAPI programs/v3）
 - 全国月次: `code/national-month-summary.rkt`（上記モジュールを利用）
-- 互換ラッパー: `code/tsu-racketframes-display.rkt` / `code/gamagori-racketframes-display.rkt` / `code/tokoname-racketframes-display.rkt` / `code/biwako-racketframes-display.rkt`
+- 互換ラッパー: `code/tsu-racketframes-display.rkt` / `code/gamagori-racketframes-display.rkt` / `code/tokoname-racketframes-display.rkt` / `code/biwako-racketframes-display.rkt` / `code/hamanako-racketframes-display.rkt`
 - 出力例: `data/parsed_tsu_races.csv` / `data/parsed_tokoname_races.csv` / `output/biwako-racketframes-report.txt`
 
 
@@ -174,6 +176,7 @@ npm install
 * **蒲郡日次 JSON の整形表示（最大約3年）**: `mise run show:gamagori`
 * **常滑日次 JSON の整形表示（最大約3年）**: `mise run show:tokoname`
 * **びわこ日次 JSON の整形表示（最大約3年）**: `mise run show:biwako`
+* **浜名湖日次 JSON の整形表示（最大約3年）**: `mise run show:hamanako`
 * **全国月次集計サマリ**: `mise run show:national-month`
 * **JSONパース&CSV全自動生成**: `mise run parse:json`
 * **モーター相関散布図表示**: `mise run plot:scatter`
