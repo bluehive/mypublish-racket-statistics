@@ -24,3 +24,7 @@
 
 - `data/programs` 全日期間の取得完了後、本体・モーター Top10 を再確認
 - 必要なら raw JSON の git 管理方針を決める
+
+## 検討中（2026-09-10）
+
+- Issue #17: 公式 `plot` 導入 → 仕様は `docs/issue-17-plot-spec.md`（実装は後続）
