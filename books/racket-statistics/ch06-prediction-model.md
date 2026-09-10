@@ -113,7 +113,7 @@ $$Score = (\text{枠番アドバンテージ点}) + (\text{全国勝率} \times 
   (printf "1着的中数: ~a\n" correct-count)
   (printf "予測的中率: ~a%\n" (* (/ correct-count total-races) 100.0)))
 
-(evaluate-model df-predicted)
+(evaluate-model df-pred)
 ```
 
 ---
