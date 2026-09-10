@@ -27,6 +27,6 @@
 
 ## 検討中（2026-09-10）
 
-- HtDP ASL/ISL+ への全面リライト: 仕様は `docs/htdp-asl-rewrite-spec.md`（本番コードは `#lang racket` 維持を提案）
+- HtDP ISL+ への全面リライト: 仕様は `docs/htdp-isl-plus-rewrite-spec.md`（本番は `#lang racket` 維持を提案）
 
 - Issue #17: 公式 `plot` 導入 → 仕様は `docs/issue-17-plot-spec.md`（実装は後続）
